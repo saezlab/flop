@@ -8,11 +8,10 @@ library(limma)
 library(ggfortify)
 library(rstudioapi)    
 
-###FUNCTIONS###
+###NORMALIZATION###
 #vsn normalization
-#This function performs vsn normalization of the data. It takes a wide-format 
-#tibble and returns a matrix. 
-vsn_norm <- function(data, plots=FALSE){
+#This function performs vsn normalization of the data.
+vsn_norm <- function(data){
   genenames <- data %>% select(gene_symbol)
   vsn_matrix <- data %>% 
     select(-gene_symbol) %>% 
@@ -23,8 +22,40 @@ vsn_norm <- function(data, plots=FALSE){
   return(vsn_matrix)
 }
 
+#Log2 quantile normalization
+#This function performs a log2 transformation followed by a quantile 
+#normalization of the data.
+log2quant_norm <- function(data) {
+  genenames <- data %>% select(gene_symbol)
+  log2quant_matrix <- data %>% 
+    select_if(., is.numeric)  %>% 
+    as.matrix() %>% 
+    +1 %>% 
+    log2() %>% 
+    normalizeQuantiles() %>%
+    as_tibble(.) %>%
+    add_column(gene_symbol = genenames) %>%
+    relocate(gene_symbol)
+  return(log2quant_matrix)
+}
 
-#Differential expression analysis
+#TMM normalization
+#This function performs TMM normalization of the data.
+tmm_norm <- function(data) {
+  genenames <- data %>% select(gene_symbol)
+  tmm_matrix <- data %>% 
+    select_if(., is.numeric) %>% 
+    as.matrix() %>% 
+    DGEList(count=.) %>% 
+    edgeR::calcNormFactors(., method="TMM") %>%
+    .$counts %>%
+    as_tibble(.) %>%
+    add_column(gene_symbol = genenames) %>%
+    relocate(gene_symbol)
+  return(tmm_matrix)
+}
+
+###dIFFERENTIAL EXPRESSION ANALYSIS###
 #This function takes as input a long-format tibble with all the gene expression 
 #levels plus the metadata. It allows limma analysis with or without intersection
 #and contrast. Returns a tibble containing the full results of the analysis
@@ -69,7 +100,7 @@ metadata <- read_tsv(file='./data/GSE85214-metadata.txt') %>%
 filt_data <- transcriptdata %>%
   filter(rowSums(select_if(., is.numeric))>500)
 #Normalization
-norm_data <- vsn_norm(transcriptdata)
+norm_data <- vsn_norm(filt_data)
 
 inter_contr <- diff_anal(norm_data, metadata, TRUE, TRUE) %>% 
   select(gene_symbol, adj.P.Val) %>% 
