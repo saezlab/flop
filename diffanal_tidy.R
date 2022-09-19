@@ -6,7 +6,8 @@ library(tidyverse)
 library(vsn)
 library(limma)
 library(ggfortify)
-library(rstudioapi)    
+library(rstudioapi)
+library(edgeR)
 
 ###NORMALIZATION###
 #vsn normalization
@@ -28,12 +29,12 @@ vsn_norm <- function(data){
 log2quant_norm <- function(data) {
   genenames <- data %>% select(gene_symbol)
   log2quant_matrix <- data %>% 
-    select_if(., is.numeric)  %>% 
+    select_if(is.numeric)  %>% 
     as.matrix() %>% 
     +1 %>% 
     log2() %>% 
     normalizeQuantiles() %>%
-    as_tibble(.) %>%
+    as_tibble() %>%
     add_column(gene_symbol = genenames) %>%
     relocate(gene_symbol)
   return(log2quant_matrix)
@@ -44,10 +45,10 @@ log2quant_norm <- function(data) {
 tmm_norm <- function(data) {
   genenames <- data %>% select(gene_symbol)
   tmm_matrix <- data %>% 
-    select_if(., is.numeric) %>% 
+    select_if(is.numeric) %>% 
     as.matrix() %>% 
     DGEList(count=.) %>% 
-    edgeR::calcNormFactors(., method="TMM") %>%
+    calcNormFactors(., method="TMM") %>%
     .$counts %>%
     as_tibble(.) %>%
     add_column(gene_symbol = genenames) %>%
