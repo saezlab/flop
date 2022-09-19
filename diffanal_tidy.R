@@ -13,10 +13,13 @@ library(rstudioapi)
 #This function performs vsn normalization of the data. It takes a wide-format 
 #tibble and returns a matrix. 
 vsn_norm <- function(data, plots=FALSE){
-  vsn_matrix <- data %>% select(-gene_symbol) %>% as.matrix(.) %>% justvsn(.)
-  if(plots == TRUE){
-    meanSdPlot(vsn_matrix, ranks=TRUE)
-  }
+  genenames <- data %>% select(gene_symbol)
+  vsn_matrix <- data %>% 
+    select(-gene_symbol) %>% 
+    as.matrix(.) %>% 
+    justvsn(.) %>%
+    as_tibble(.) %>%
+    add_column(gene_symbol = genenames)
   return(vsn_matrix)
 }
 
@@ -26,31 +29,17 @@ vsn_norm <- function(data, plots=FALSE){
 #levels plus the metadata. It allows limma analysis with or without intersection
 #and contrast. Returns a tibble containing the full results of the analysis
 #indexed by gene symbol.
-#' Title
-#'
-#' @param total_data 
-#' @param intersection 
-#' @param contrast 
-#'
-#' @return
-#' @export
-#'
-#' @examples
-diff_anal <- function(total_data, intersection=FALSE, contrast=FALSE){
-  data <- total_data %>% 
-    select(gene_symbol, expr_lev, sample) %>% 
-    pivot_wider(., names_from = sample, values_from = expr_lev)
-  genenames <- data %>% select(gene_symbol)
-  vsnres <- vsn_norm(data)
-
-  designmat <- total_data %>%
-    select(sample, disease.status, fraction) %>%
-    distinct(sample, .keep_all = TRUE) %>%
+diff_anal <- function(data_norm, metadata, intersection=FALSE, contrast=FALSE){
+  genenames <- data_norm %>% select(gene_symbol)
+  vsn_matrix <- data_norm %>% select(-gene_symbol)
+  
+  designmat <- metadata %>%
+    select(Sample.Title, disease.status, fraction) %>%
     { if(intersection) model.matrix(~ 0 + disease.status + fraction, data=.)
       else model.matrix(~disease.status + fraction, data=.)
-        }
+    }
   
-  fit <- lmFit(vsnres, design = designmat)
+  fit <- lmFit(vsn_matrix, design = designmat)
   
   {if(contrast)
     fit <- "disease.statusSA-disease.statusHC" %>%
@@ -60,12 +49,11 @@ diff_anal <- function(total_data, intersection=FALSE, contrast=FALSE){
     else fit <- eBayes(fit)
   }
   
-  if(contrast) coefs="disease.statusSA-disease.statusHC" else coefs=NULL
+  if(contrast) coefs="disease.statusSA-disease.statusHC" 
+  else coefs="disease.statusSA"
   de_table <- topTable(fit, number = Inf, coef = coefs, sort.by='none') %>%
     as_tibble() %>%
-    mutate(gene_symbol = genenames)
-  
-  saveRDS(designmat, filename)
+    add_column(gene_symbol = genenames)
   
   return(de_table)
   
@@ -73,24 +61,20 @@ diff_anal <- function(total_data, intersection=FALSE, contrast=FALSE){
 
 ###MAIN###
 #read files
-transcriptdata <- read_tsv(file='./Datasets/GSE85214-expression.txt') %>%
-  pivot_longer(., cols= -gene_symbol, names_to = 'sample', values_to='expr_lev')
-total_data <- read_tsv(file='./Datasets/GSE85214-metadata.txt') %>%
-  left_join(transcriptdata, ., by=c('sample'='Sample_geo_accession'))%>%
-  rename(., 'disease.status' = 'disease status')
+transcriptdata <- read_tsv(file='./data/GSE85214-expression.txt')
+metadata <- read_tsv(file='./data/GSE85214-metadata.txt') %>% 
+  rename_all(make.names) %>%
+  as_tibble()
 #Prefiltering to remove low expressed genes. Threshold 500 counts
-filt_data <- total_data %>% 
-  group_by(gene_symbol) %>% 
-  filter(sum(expr_lev) >500) %>%
-  ungroup()
+filt_data <- transcriptdata %>%
+  filter(rowSums(select_if(., is.numeric))>500)
+#Normalization
+norm_data <- vsn_norm(transcriptdata)
 
-inter_contr <- diff_anal(filt_data, TRUE, TRUE) %>% 
+inter_contr <- diff_anal(norm_data, metadata, TRUE, TRUE) %>% 
   select(gene_symbol, adj.P.Val) %>% 
   rename(adj_pvalue_inter_contr = adj.P.Val)
-inter <- diff_anal(filt_data, TRUE, FALSE) %>% 
-  select(gene_symbol, adj.P.Val) %>% 
-  rename(adj_pvalue_inter = adj.P.Val)
-no_inter_no_contr <- diff_anal(filt_data, FALSE, FALSE) %>% 
+no_inter_no_contr <- diff_anal(norm_data, metadata, FALSE, FALSE) %>% 
   select(gene_symbol, adj.P.Val) %>% 
   rename(adj_pvalue_none = adj.P.Val)
 
