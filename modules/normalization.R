@@ -11,6 +11,8 @@ library(edgeR)
 #' samples as columns
 #'
 #' @return a tibble containing the vsn normalised values of the data
+#' @importFrom dplyr %>% select as_tibble add_column
+#' @importFrom limma justvsn
 #' @export
 #'
 #' @examples
@@ -18,7 +20,7 @@ library(edgeR)
 vsn_norm <- function(data){
   genenames <- data %>% select(gene_symbol)
   vsn_matrix <- data %>% 
-    select(-gene_symbol) %>% 
+    select_if(is.numeric) %>% 
     as.matrix(.) %>% 
     justvsn(.) %>%
     as_tibble(.) %>%
@@ -34,6 +36,8 @@ vsn_norm <- function(data){
 #' samples as columns
 #'
 #' @return a tibble containing the log2 + quantile normalised values of the data
+#' @importFrom dplyr %>% select select_if as_tibble add_column relocate
+#' @importFrom limma normalizeQuantiles
 #' @export
 #'
 #' @examples
@@ -59,6 +63,8 @@ log2quant_norm <- function(data) {
 #' samples as columns
 #'
 #' @return a tibble containing the TMM normalised values of the data
+#' @importFrom dplyr %>% select select_if as_tibble add_column
+#' @importFrom edgeR DGEList calcNormFactors
 #' @export
 #'
 #' @examples
