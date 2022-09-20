@@ -18,13 +18,14 @@ library(edgeR)
 #' @examples
 #' vsn_norm(gene_counts)
 vsn_norm <- function(data){
-  genenames <- data %>% select(gene_symbol)
+  genenames <- data %>% select(gene_symbol) %>% as.list()
   vsn_matrix <- data %>% 
     select_if(is.numeric) %>% 
     as.matrix(.) %>% 
     justvsn(.) %>%
     as_tibble(.) %>%
-    add_column(gene_symbol = genenames)
+    add_column(gene_symbol = genenames) %>%
+    relocate(gene_symbol)
   return(vsn_matrix)
 }
 
@@ -43,7 +44,7 @@ vsn_norm <- function(data){
 #' @examples
 #' log2quant_norm(gene_counts)
 log2quant_norm <- function(data) {
-  genenames <- data %>% select(gene_symbol)
+  genenames <- data %>% select(gene_symbol) %>% as.list()
   log2quant_matrix <- data %>% 
     select_if(is.numeric)  %>% 
     as.matrix() %>% 
@@ -70,7 +71,7 @@ log2quant_norm <- function(data) {
 #' @examples
 #' tmm_norm(gene_counts)
 tmm_norm <- function(data) {
-  genenames <- data %>% select(gene_symbol)
+  genenames <- data %>% select(gene_symbol) %>% as.list()
   tmm_matrix <- data %>% 
     select_if(is.numeric) %>% 
     as.matrix() %>% 

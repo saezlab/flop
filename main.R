@@ -6,12 +6,11 @@ library(rstudioapi)
 library(edgeR)
 
 #Directory settings
-source(this.dir <- dirname(parent.frame(2)$ofile))
-source(setwd(this.dir))
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #File imports
-source('./functions/normalization.R')
-source('./functions/diffexp.R')
+source('./modules/normalization.R')
+source('./modules/diffexp.R')
 
 ###MAIN###
 #Read files
@@ -25,15 +24,14 @@ filt_data <- transcriptdata %>%
   filter(rowSums(select_if(., is.numeric))>500)
 
 #Normalization
-norm_data <- vsn_norm(filt_data)
+vsn_results <- vsn_norm(filt_data)
+log2quant_results <- log2quant_norm(filt_data)
+tmm_results <- tmm_norm(filt_data)
 
 #Differential expression analysis
-inter_contr <- limma_anal(norm_data, metadata, TRUE, TRUE) %>% 
-  select(gene_symbol, adj.P.Val) %>% 
-  rename(adj_pvalue_inter_contr = adj.P.Val)
-no_inter_no_contr <- limma_anal(norm_data, metadata, FALSE, FALSE) %>% 
-  select(gene_symbol, adj.P.Val) %>% 
-  rename(adj_pvalue_none = adj.P.Val)
+limma_results <- limma_anal(vsn_results, metadata)
+
+edger_results <- edger_anal(vsn_results, metadata)
 
 #Results formatting
 res <- left_join(inter_contr, no_inter_no_contr, by = 'gene_symbol')
