@@ -18,13 +18,12 @@ library(edgeR)
 #' @examples
 #' vsn_norm(gene_counts)
 vsn_norm <- function(data){
-  genenames <- data %>% select(gene_symbol) %>% as.list()
   vsn_matrix <- data %>% 
     select_if(is.numeric) %>% 
     as.matrix(.) %>% 
     justvsn(.) %>%
     as_tibble(.) %>%
-    add_column(gene_symbol = genenames) %>%
+    mutate(gene_symbol = data$gene_symbol) %>%
     relocate(gene_symbol)
   return(vsn_matrix)
 }
@@ -33,7 +32,7 @@ vsn_norm <- function(data){
 #' Log2 quantile normalization
 #' This function performs a log2 transformation followed by a quantile
 #' normalization of the data
-#' @param dataa tibble containing gene counts, genes as rows and
+#' @param data a tibble containing gene counts, genes as rows and
 #' samples as columns
 #'
 #' @return a tibble containing the log2 + quantile normalised values of the data
@@ -44,7 +43,6 @@ vsn_norm <- function(data){
 #' @examples
 #' log2quant_norm(gene_counts)
 log2quant_norm <- function(data) {
-  genenames <- data %>% select(gene_symbol) %>% as.list()
   log2quant_matrix <- data %>% 
     select_if(is.numeric)  %>% 
     as.matrix() %>% 
@@ -52,7 +50,7 @@ log2quant_norm <- function(data) {
     log2() %>% 
     normalizeQuantiles() %>%
     as_tibble() %>%
-    add_column(gene_symbol = genenames) %>%
+    mutate(gene_symbol = data$gene_symbol) %>%
     relocate(gene_symbol)
   return(log2quant_matrix)
 }
@@ -71,15 +69,14 @@ log2quant_norm <- function(data) {
 #' @examples
 #' tmm_norm(gene_counts)
 tmm_norm <- function(data) {
-  genenames <- data %>% select(gene_symbol) %>% as.list()
   tmm_matrix <- data %>% 
     select_if(is.numeric) %>% 
     as.matrix() %>% 
     DGEList(count=.) %>% 
     calcNormFactors(., method="TMM") %>%
-    .$counts %>%
+    cpm(.) %>%
     as_tibble(.) %>%
-    add_column(gene_symbol = genenames) %>%
+    mutate(gene_symbol = data$gene_symbol) %>%
     relocate(gene_symbol)
   return(tmm_matrix)
 }
