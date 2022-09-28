@@ -38,7 +38,7 @@ limma_anal <- function(data_norm, metadata){
     as_tibble() %>%
     mutate(gene_symbol = data_norm$gene_symbol) %>%
     relocate(gene_symbol) %>%
-    dplyr::rename(., padj_limma = adj.P.Val)
+    dplyr::rename(logFC_limma = logFC, padj_limma = adj.P.Val)
   
   return(results)
 }
@@ -78,7 +78,7 @@ edger_anal <- function(data_norm, metadata) {
     as_tibble() %>%
     mutate(gene_symbol = data_norm$gene_symbol) %>%
     relocate(gene_symbol) %>%
-    dplyr::rename(., padj_edger = PValue)
+    dplyr::rename(logFC_edger = logFC, padj_edger = PValue)
   
   return(results)
 }
@@ -115,6 +115,6 @@ deseq2_anal <- function(raw_data, metadata) {
     as_tibble() %>%
     mutate(gene_symbol = raw_data$gene_symbol)  %>%
     relocate(gene_symbol) %>%
-    dplyr::rename(., padj_deseq2= padj)
+    dplyr::rename(logFC_deseq2 = log2FoldChange, padj_deseq2= padj)
   return(results)
 }
