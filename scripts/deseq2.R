@@ -39,7 +39,6 @@ deseq2_anal <- function(counts, metadata) {
   return(results)
 }
 
-
 ###Main###
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]

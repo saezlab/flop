@@ -25,6 +25,7 @@ vsn_norm <- function(data){
     relocate(gene_symbol)
   return(vsn_matrix)
 }
+
 ###Main###
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
