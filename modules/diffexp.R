@@ -83,7 +83,7 @@ edger_anal <- function(data_norm, metadata) {
   return(results)
 }
 
-#' EdgeR differential expression analysis
+#' DESeq2 differential expression analysis
 #'
 #' @param raw_data a tibble containing raw gene counts; genes as rows, samples
 #' as columns
