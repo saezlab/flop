@@ -16,8 +16,8 @@ library(edgeR)
 #' @export
 #'
 #' @examples
-#' edger_anal(vsn_results, metadata_cancer)
-edger_anal <- function(counts, metadata) {
+#' edger_analysis(vsn_results, metadata_cancer)
+edger_analysis <- function(counts, metadata) {
   dge_obj <- counts %>% select_if(is.numeric) %>% DGEList(count=.)
   
   designmat <- metadata %>%
@@ -52,7 +52,7 @@ counts_file <- args[grep("--counts",args)+1]
 meta_file <- args[grep("--meta",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
-results <- edger_anal(counts, metadata)
+results <- edger_analysis(counts, metadata)
 
 write.table(results, 'edger_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

@@ -16,8 +16,8 @@ library(limma)
 #' @export
 #'
 #' @examples
-#' limma_anal(vsn_counts_exp1, metadata_exp1)
-limma_anal <- function(data_norm, metadata){
+#' limma_analysis(vsn_counts_exp1, metadata_exp1)
+limma_analysis <- function(data_norm, metadata){
   norm_counts <- data_norm %>% select_if(is.numeric)
   
   metadata <- metadata %>%
@@ -51,7 +51,7 @@ norm_file <- args[grep("--norm",args)+1]
 meta_file <- args[grep("--meta",args)+1]
 norm_counts <- read.table(file = norm_file, header = TRUE, sep = "\t")
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
-results <- limma_anal(norm_counts, metadata)
+results <- limma_analysis(norm_counts, metadata)
 
 write.table(results, 'limma_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

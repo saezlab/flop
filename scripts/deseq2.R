@@ -16,8 +16,8 @@ library(DESeq2)
 #' @export
 #'
 #' @examples
-#' deseq2_anal(raw_counts, metadata_cancer)
-deseq2_anal <- function(counts, metadata) {
+#' deseq2_analysis(raw_counts, metadata_cancer)
+deseq2_analysis <- function(counts, metadata) {
   gene_counts <- counts %>% 
     as.data.frame(.)
   rownames(gene_counts) <- counts$gene_symbol
@@ -45,7 +45,7 @@ counts_file <- args[grep("--counts",args)+1]
 meta_file <- args[grep("--meta",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
-results <- deseq2_anal(counts, metadata)
+results <- deseq2_analysis(counts, metadata)
 
 write.table(results, 'deseq2_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')
