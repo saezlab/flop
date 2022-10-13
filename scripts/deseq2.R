@@ -24,7 +24,7 @@ deseq2_analysis <- function(counts, metadata) {
   gene_counts <- gene_counts %>% 
     select(-gene_symbol)
   
-  formatted_data <- DESeqDataSetFromMatrix(countData=gene_counts, 
+  formatted_data <- DESeqDataSetFromMatrix(countData = gene_counts, 
                                            colData = metadata, 
                                            design = ~ 0+ group)
   studygroups <- levels(metadata$group)
@@ -43,9 +43,12 @@ deseq2_analysis <- function(counts, metadata) {
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
 meta_file <- args[grep("--meta",args)+1]
-counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
-metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
+dataset_id <- strsplit(counts_file, split='_')[[1]][1]
+counts <- read.table(file = counts_file, header = TRUE, sep = "\t", row.names=NULL)
+metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE, row.names=NULL)
 results <- deseq2_analysis(counts, metadata)
 
-write.table(results, 'deseq2_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
+output_filename <- paste(dataset_id, 'NA', 'deseq2', 'de', sep = '__') %>%
+  paste(., '.tsv', sep='')
+write.table(results, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

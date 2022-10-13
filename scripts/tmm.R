@@ -24,8 +24,8 @@ tmm_norm <- function(data) {
     calcNormFactors(., method="TMM") %>%
     cpm(.) %>%
     as_tibble(.) %>%
-    mutate(gene_symbol = data$gene_symbol) %>%
-    relocate(gene_symbol)
+    mutate(ID = data$gene_symbol) %>%
+    relocate(ID)
   return(tmm_matrix)
 }
 
@@ -33,8 +33,10 @@ tmm_norm <- function(data) {
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
-
+dataset_id <- strsplit(counts_file, split='_')[[1]][1]
 results <- tmm_norm(counts)
 
-write.table(results, 'tmm_norm.tsv', sep='\t', quote=FALSE, row.names=FALSE)
+output_filename <- paste(dataset_id, 'tmm', 'norm', sep = '__') %>%
+  paste(., '.tsv', sep='')
+write.table(results, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

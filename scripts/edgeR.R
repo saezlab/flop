@@ -40,8 +40,8 @@ edger_analysis <- function(counts, metadata) {
     as.data.frame() %>% 
     as_tibble() %>%
     mutate(ID = counts$gene_symbol) %>%
-    dplyr::rename(padj = FDR) %>%
-    select(ID, logFC, F, padj)
+    dplyr::rename(padj = FDR, stat = F) %>%
+    select(ID, logFC, stat, padj)
   
   return(results)
 }
@@ -52,7 +52,10 @@ counts_file <- args[grep("--counts",args)+1]
 meta_file <- args[grep("--meta",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
+dataset_id <- strsplit(counts_file, split='_')[[1]][1]
 results <- edger_analysis(counts, metadata)
 
-write.table(results, 'edger_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
+output_filename <- paste(dataset_id, 'NA', 'edger', 'de', sep = '__') %>%
+  paste(., '.tsv', sep='')
+write.table(results, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

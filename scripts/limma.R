@@ -38,9 +38,9 @@ limma_analysis <- function(data_norm, metadata){
   
   results <- topTable(fit, number = Inf, coef = coefs, sort.by='none') %>%
     as_tibble() %>%
-    mutate(ID = data_norm$gene_symbol) %>%
-    dplyr::rename(padj = adj.P.Val) %>%
-    select(ID, logFC, B, padj)
+    mutate(ID = data_norm$ID) %>%
+    dplyr::rename(padj = adj.P.Val, stat = t) %>%
+    select(ID, logFC, stat, padj)
   
   return(results)
 }
@@ -51,7 +51,11 @@ norm_file <- args[grep("--norm",args)+1]
 meta_file <- args[grep("--meta",args)+1]
 norm_counts <- read.table(file = norm_file, header = TRUE, sep = "\t")
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
+dataset_id <- strsplit(norm_file, split='__')[[1]][1]
+norm_id <- strsplit(norm_file, split='__')[[1]][2]
 results <- limma_analysis(norm_counts, metadata)
 
-write.table(results, 'limma_results.tsv', sep='\t', quote=FALSE, row.names=FALSE)
+output_filename <- paste(dataset_id, norm_id, 'limma', 'de', sep = '__') %>%
+  paste(., '.tsv', sep='')
+write.table(results, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')

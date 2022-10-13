@@ -24,8 +24,8 @@ log2quant_norm <- function(data) {
     log2() %>% 
     normalizeQuantiles() %>%
     as_tibble() %>%
-    mutate(gene_symbol = data$gene_symbol) %>%
-    relocate(gene_symbol)
+    mutate(ID = data$gene_symbol) %>%
+    relocate(ID)
   return(log2quant_matrix)
 }
 
@@ -33,8 +33,10 @@ log2quant_norm <- function(data) {
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
-
+dataset_id <- strsplit(counts_file, split='_')[[1]][1]
 results <- log2quant_norm(counts)
 
-write.table(results, 'log2quant_norm.tsv', sep='\t', quote=FALSE, row.names=FALSE)
+output_filename <- paste(dataset_id, 'log2quant', 'norm', sep = '__') %>%
+  paste(., '.tsv', sep='')
+write.table(results, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 print('Done!')
