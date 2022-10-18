@@ -5,3 +5,5 @@
 data/*
 *.tsv
 *.zip
+**/omnipathr-log/*
+*.pdf
