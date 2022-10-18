@@ -7,3 +7,4 @@ data/*
 *.zip
 **/omnipathr-log/*
 *.pdf
+*.png
