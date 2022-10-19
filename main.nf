@@ -1,10 +1,5 @@
 #!/usr/bin/env nextflow
 
-// Define input parameters
-params.counts = "$baseDir/data/test_input/GSE103001_GeneLevel_Raw_data.tsv"
-params.metadata = "$baseDir/data/test_input/GSE103001_filtered_metadata.tsv"
-params.scripts_dir = "$baseDir/scripts"
-
 // Normalize counts files using VSN
 process normalize_vsn {
  
@@ -17,7 +12,7 @@ process normalize_vsn {
     
     script:
     """
-    Rscript ${scripts_dir}/vsn.R --counts raw_counts.tsv
+    Rscript scripts_dir/vsn.R --counts raw_counts.tsv
     """
 
 }
@@ -34,7 +29,7 @@ process normalize_tmm {
     
     script:
     """
-    Rscript ${scripts_dir}/tmm.R --counts raw_counts.tsv
+    Rscript scripts_dir/tmm.R --counts raw_counts.tsv
     """
 
 }
@@ -51,7 +46,7 @@ process normalize_log2quant {
     
     script:
     """
-    Rscript ${scripts_dir}/log2quant.R --counts raw_counts.tsv
+    Rscript scripts_dir/log2quant.R --counts raw_counts.tsv
     """
 
 }
@@ -69,12 +64,36 @@ process diffexp_deseq2 {
     
     script:
     """
-    Rscript ${scripts_dir}/deseq2.R --counts raw_counts.tsv --meta metadata.tsv
+    Rscript scripts_dir/deseq2.R --counts raw_counts.tsv --meta metadata.tsv
     """
 
 }
 
 
+// Diff exp with limma
+process diffexp_limma {
+ 
+    input:
+    path 'scripts_dir'
+    path 'norm_expr.tsv'
+    path 'metadata.tsv'
+ 
+    output:
+    path '*__limma__de.tsv'
+    
+    script:
+    """
+    Rscript scripts_dir/limma.R --norm norm_expr.tsv --meta metadata.tsv
+    """
+
+}
+
+// Input parameters
+params.counts = "$baseDir/data/test_input/GSE103001_GeneLevel_Raw_data.tsv"
+params.metadata = "$baseDir/data/test_input/GSE103001_filtered_metadata.tsv"
+params.scripts_dir = "$baseDir/scripts"
+
+// Workflow definition
 workflow {
 
     // Apply normalization
@@ -82,7 +101,12 @@ workflow {
     normalize_tmm(params.scripts_dir, params.counts)
     normalize_log2quant(params.scripts_dir, params.counts)
 
-    // Apply diff expression analysis
+    // Apply diff expression analysis from raw counts
     diffexp_deseq2(params.scripts_dir, params.counts, params.metadata)
+
+    // Execute limma downstream of VSN normalization
+    diffexp_limma(params.scripts_dir, normalize_vsn.out, params.metadata)
+
+
 
 }
