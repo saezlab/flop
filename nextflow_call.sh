@@ -1,0 +1,1 @@
+nextflow run main.nf -with-report report.html -with-dag dag.png 
