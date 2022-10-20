@@ -64,7 +64,7 @@ process diffexp_limma {
     dataID_norm == dataID_data
 
     output:
-    path '*__limma__de.tsv'
+    tuple val(dataID_norm), path ('*__limma__de.tsv')
     
     script:
     def (counts, meta) = datafiles
@@ -83,7 +83,7 @@ process diffexp_deseq2 {
     tuple val(dataID), path(datafiles)
  
     output:
-    path '*__deseq2__de.tsv'
+    tuple val(dataID), path ('*__deseq2__de.tsv')
     
     script:
     def (counts, meta) = datafiles
@@ -102,13 +102,30 @@ process diffexp_edger{
     tuple val(dataID), path(datafiles)
  
     output:
-    path '*__edger__de.tsv'
+    tuple val(dataID), path ('*__edger__de.tsv')
     
     script:
     def (counts, meta) = datafiles
 
     """
     Rscript ${scripts_dir}/edger.R --counts ${counts} --meta ${meta}
+    """
+
+}
+
+process merge_de{
+ 
+    input:
+    path scripts_dir
+    tuple val(dataID), path(diffexpr_files)
+ 
+    output:
+    path ('*__decouplerinput.tsv')
+    
+    script:
+
+    """
+    Rscript ${scripts_dir}/merge_de.R --dataset ${dataID} --param padj
     """
 
 }
@@ -122,14 +139,21 @@ workflow {
     normalize_vsn(params.scripts_dir,files).set {vsn}
     normalize_tmm(params.scripts_dir,files).set {tmm}
     normalize_log2quant(params.scripts_dir,files).set {log2quant}
+
     vsn
         .mix(tmm, log2quant)
         .groupTuple()
         .set {norm_files}
     
-    diffexp_limma(params.scripts_dir,norm_files,files)
-    diffexp_deseq2(params.scripts_dir,files)
-    diffexp_edger(params.scripts_dir,files)
+    diffexp_limma(params.scripts_dir,norm_files,files).set {limma}
+    diffexp_deseq2(params.scripts_dir,files).set {deseq2}
+    diffexp_edger(params.scripts_dir,files).set {edger}
 
-
+    limma
+        .mix(deseq2, edger)
+        .groupTuple()
+        .set {diffexpr_files}
+    diffexpr_files.view()
+    merge_de(params.scripts_dir,diffexpr_files).set {mergede}
+    mergede.view()
 }
