@@ -130,6 +130,23 @@ process merge_de{
 
 }
 
+process func_decoupler{
+ 
+    input:
+    path scripts_dir
+    path(decoupler_files)
+ 
+    output:
+    path ('*__decoupleroutput.tsv')
+    
+    script:
+
+    """
+    Rscript ${scripts_dir}/decoupler.R --input ${decoupler_files}
+    """
+
+}
+
 
 workflow {
     Channel
@@ -153,7 +170,7 @@ workflow {
         .mix(deseq2, edger)
         .groupTuple()
         .set {diffexpr_files}
-    diffexpr_files.view()
+    
     merge_de(params.scripts_dir,diffexpr_files).set {mergede}
-    mergede.view()
+    func_decoupler(params.scripts_dir, mergede).set {decoupler}
 }
