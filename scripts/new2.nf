@@ -109,7 +109,7 @@ process func_decoupler{
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler.R --input ${decoupler_files}
+    python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files}
     """
 
 }
@@ -121,7 +121,7 @@ workflow {
         .set {datasets}
     
     Channel
-        .of('padj', 'logFC', 'stat')
+        .of('logFC', 'stat')
         .set {diffexpr_methods}
     
     Channel
@@ -132,10 +132,6 @@ workflow {
     normalize(params.scripts_dir,datasets, norm_methods)
         .combine(datasets, by: 0)
         .set{normalised_vals}
-        
-
-    
-
 
     //differential analysis channels
     diffexp_deseq2(params.scripts_dir,datasets).set {deseq2}
@@ -153,5 +149,8 @@ workflow {
     merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods)
         .view()
         .set {mergede}
-    //func_decoupler(params.scripts_dir, mergede).set {decoupler}
+    
+    func_decoupler(params.scripts_dir, mergede)
+        .view()
+        .set {decoupler}
 }
