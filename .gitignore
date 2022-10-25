@@ -13,3 +13,4 @@ data
 .nextflow
 work
 .nextflow.log*
+*.pyc

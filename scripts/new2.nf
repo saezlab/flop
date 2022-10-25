@@ -1,57 +1,22 @@
 
 params.scripts_dir = "/mnt/c/Users/victo/Onedrive - Universidad Politécnica de Madrid/Documentos/1º Master/Internship/flop_benchmark/scripts"
 
-//VSN normalization
-process normalize_vsn {
+//normalization
+process normalize {
  
     input:
     path scripts_dir
     tuple val(dataID), path(datafiles)
+    each norm_method
  
     output:
-    tuple val(dataID), path ('*__vsn__norm.tsv')
+    tuple val(dataID),path ('*__norm.tsv')
     
     script:
     def (counts, meta) = datafiles
 
     """
-    Rscript ${scripts_dir}/vsn.R --counts ${counts}
-    """
-}
-
-//TMM normalization
-process normalize_tmm {
- 
-    input:
-    path scripts_dir
-    tuple val(dataID), path(datafiles)
- 
-    output:
-    tuple val(dataID), path ('*__tmm__norm.tsv')
-    
-    script:
-    def (counts, meta) = datafiles
-
-    """
-    Rscript ${scripts_dir}/tmm.R --counts ${counts}
-    """
-}
-
-// Log2 quantile normalization
-process normalize_log2quant {
- 
-    input:
-    path scripts_dir
-    tuple val(dataID), path(datafiles)
- 
-    output:
-    tuple val(dataID), path ('*__log2quant__norm.tsv')
-    
-    script:
-    def (counts, meta) = datafiles
-
-    """
-    Rscript ${scripts_dir}/log2quant.R --counts ${counts}
+    Rscript ${scripts_dir}/${norm_method}.R --counts ${counts}
     """
 }
 
@@ -60,20 +25,16 @@ process diffexp_limma {
  
     input:
     path scripts_dir
-    tuple val(dataID_norm), path(norm_files)
-    tuple val(dataID_data), path(datafiles)
-    
-    when:
-    dataID_norm == dataID_data
+    tuple val(dataID), path(norm_file),path(datafiles)
 
     output:
-    tuple val(dataID_norm), path ('*__limma__de.tsv')
+    tuple val(dataID), path ('*__limma__de.tsv')
     
     script:
     def (counts, meta) = datafiles
 
     """
-    Rscript ${scripts_dir}/limma.R --norm ${norm_files} --meta ${meta}
+    Rscript ${scripts_dir}/limma.R --norm ${norm_file} --meta ${meta}
     """
 
 }
@@ -163,30 +124,34 @@ workflow {
         .of('padj', 'logFC', 'stat')
         .set {diffexpr_methods}
     
+    Channel
+        .of('vsn', 'log2quant', 'tmm')
+        .set{norm_methods}
+    
     //normalization channels
-    normalize_vsn(params.scripts_dir,datasets).set {vsn}
-    normalize_tmm(params.scripts_dir,datasets).set {tmm}
-    normalize_log2quant(params.scripts_dir,datasets).set {log2quant}
+    normalize(params.scripts_dir,datasets, norm_methods)
+        .combine(datasets, by: 0)
+        .set{normalised_vals}
+        
+
+    
+
 
     //differential analysis channels
-    //diffexp_deseq2(params.scripts_dir,datasets).set {deseq2}
-    //diffexp_edger(params.scripts_dir,datasets).set {edger}
-
-    vsn
-        .mix(tmm, log2quant)
-        .set {norm_files}
+    diffexp_deseq2(params.scripts_dir,datasets).set {deseq2}
+    diffexp_edger(params.scripts_dir,datasets).set {edger}
     
-    diffexp_limma(params.scripts_dir,norm_files,datasets)
-        .collect()
-        .set {limma}
-    limma.view()
+    diffexp_limma(params.scripts_dir,normalised_vals)
+        .set{limma}
 
     //functional analysis channels
-    //limma
-    //    .mix(deseq2, edger)
-    //    .groupTuple()
-    //    .set {diffexpr_files}
+    limma
+        .mix(deseq2, edger)
+        .groupTuple()
+        .set {diffexpr_files}
     
-    //merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods).set {mergede}
+    merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods)
+        .view()
+        .set {mergede}
     //func_decoupler(params.scripts_dir, mergede).set {decoupler}
 }
