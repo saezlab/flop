@@ -14,3 +14,4 @@ data
 work
 .nextflow.log*
 *.pyc
+Stats.nb.html

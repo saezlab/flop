@@ -98,6 +98,7 @@ process merge_de{
 
 //Functional analysis 
 process func_decoupler{
+    publishDir "$params.scripts_dir/results", mode: 'move'
  
     input:
     path scripts_dir
@@ -111,13 +112,13 @@ process func_decoupler{
     """
     python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files}
     """
-
 }
+
 
 
 workflow {
     Channel
-        .fromFilePairs('/mnt/c/Users/victo/Onedrive - Universidad Politécnica de Madrid/Documentos/1º Master/Internship/flop_benchmark/scripts/data/*_{GeneLevel_Raw_data,*_metadata}.tsv')
+        .fromFilePairs('/mnt/c/Users/victo/Onedrive - Universidad Politécnica de Madrid/Documentos/1º Master/Internship/flop_benchmark/scripts/data/*_{*_countdata,*_metadata}.tsv')
         .set {datasets}
     
     Channel
@@ -131,6 +132,7 @@ workflow {
     //normalization channels
     normalize(params.scripts_dir,datasets, norm_methods)
         .combine(datasets, by: 0)
+        //.view{"Normalization: $it \n"}
         .set{normalised_vals}
 
     //differential analysis channels
@@ -144,13 +146,14 @@ workflow {
     limma
         .mix(deseq2, edger)
         .groupTuple()
+        //.view{"Differential analysis: $it \n"}
         .set {diffexpr_files}
     
     merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods)
-        .view()
+        //.view{"Decoupler input: $it \n"}
         .set {mergede}
     
     func_decoupler(params.scripts_dir, mergede)
-        .view()
+        .view{"Decoupler output: $it"}
         .set {decoupler}
 }

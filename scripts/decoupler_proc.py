@@ -21,11 +21,10 @@ selected_results = list(map(dc_result.get, methods))
 for i in range(len(methods)):
     newtags = [name + '__' + suffixes[i] for name in selected_results[i].index.values]
     selected_results[i].index = newtags
-dc_output = pd.concat(selected_results)
+    dc_output = selected_results[i]
+    output_file = input_file.replace('__decouplerinput.tsv', '__{}__decoupleroutput.tsv'.format(suffixes[i]))
+    dc_output.to_csv(output_file, sep='\t')
 
-#File export
-output_file = input_file.replace('__decouplerinput.tsv', '__decoupleroutput.tsv')
-dc_output.to_csv(output_file, sep='\t')
 
 
 
