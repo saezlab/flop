@@ -88,7 +88,7 @@ anova_df <- anova_df %>% rename(pval = `p-value`)
 ## Visualization
 ```{r}
 ggplot(anova_df, aes(eval, pval, fill = ifelse(pval>0.05, 'non significant', 'significant'))) +
-  geom_bar(stat='identity') +
+  geom_bar(stat='identity', width=0.2) +
   geom_hline(yintercept=0.05) +
   facet_grid(cell_line ~ pathway)
   
@@ -96,12 +96,117 @@ ggplot(anova_df, aes(eval, pval, fill = ifelse(pval>0.05, 'non significant', 'si
 
 ```
 
-```{r}
-ggplot(selected_data,aes(norm,scores,
-              fill=treatment))+
-  facet_grid(.~diffexp,scale="free_x",space="free",
-             labeller=label_both)+
-  guides(alpha = guide_legend(override.aes = list(fill = "darkgray")))+
-  geom_boxplot()
+```{r, fig.width=15,fig.height=7}
+
+ggplot(anova_df, aes(eval, pathway), size=pval) +
+  geom_point(aes(eval, pathway, colour = pval<0.05,size=-log(pval)), position = position_dodge(width = 0)) +
+  scale_colour_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  scale_size(name='-log(pvalue)')+
+  xlab('Level') + 
+  ylab('Pathways')+
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~ cell_line)
+ggsave('scatterpvals.png',path='./results/', dpi=300)
+
+```
+```{r, fig.width=15,fig.height=7}
+
+ggplot(anova_df, aes(cell_line, pathway), size=pval) +
+  geom_point(aes(cell_line, pathway, colour = pval<0.05,size=-log(pval)), position = position_dodge(width = 0)) +
+  scale_colour_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  scale_size(name='-log(pvalue)')+
+  xlab('Cell line') + 
+  ylab('Pathways')+
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~ eval)
+ggsave('scatterpvalspathway_stat.png',path='./results/', dpi=300)
+
 ```
 
+
+```{r}
+library(metap)
+acrosspathways_results <- tibble()
+acrosscell_results <- tibble()
+for(cell_line in cell_lines){
+  selected_data_meta <- anova_df %>% 
+    filter(cell_line==!!cell_line)
+  norm_meta <- selected_data_meta %>% 
+    filter(eval=='norm') %>% pull(pval) %>% sumlog()
+  diffexp_meta <- selected_data_meta %>% 
+    filter(eval=='diffexp') %>% 
+    pull(pval) %>% 
+    sumlog()
+  acrosspathways_results <- c(norm_meta[1], norm_meta[2], norm_meta[3]) %>% 
+    as_tibble() %>% 
+    mutate(value=!!cell_line, eval='norm', across='Across pathways') %>%
+	 relocate(value, eval) %>%
+    rbind(acrosspathways_results,.)
+  acrosspathways_results <- c(diffexp_meta[1], diffexp_meta[2], diffexp_meta[3]) %>% 
+    as_tibble() %>% 
+    mutate(value=!!cell_line, eval='diffexp', across='Across pathways') %>% 
+    relocate(value, eval) %>%
+    rbind(acrosspathways_results,.)
+}
+
+for(pathway in pathways){
+  selected_data_meta <- anova_df %>% 
+    filter(pathway==!!pathway)
+  norm_meta <- selected_data_meta %>% 
+    filter(eval=='norm') %>% pull(pval) %>% sumlog()
+  diffexp_meta <- selected_data_meta %>% 
+    filter(eval=='diffexp') %>% 
+    pull(pval) %>% 
+    sumlog()
+  acrosscell_results <- c(norm_meta[1], norm_meta[2], norm_meta[3]) %>% 
+    as_tibble() %>% 
+    mutate(value=!!pathway, eval='norm', across='Across cell lines') %>% 
+    relocate(value, eval) %>%
+    rbind(acrosscell_results,.)
+  acrosscell_results <- c(diffexp_meta[1], diffexp_meta[2], diffexp_meta[3]) %>% 
+    as_tibble() %>% 
+    mutate(value=!!pathway, eval='diffexp', across='Across cell lines') %>% 
+    relocate(value, eval) %>%
+    rbind(acrosscell_results,.)
+  
+}
+metanalysis_results <- rbind(acrosscell_results, acrosspathways_results)
+```
+
+```{r}
+ggplot(acrosspathways_results, aes(eval, p)) +
+  geom_bar(aes(cell_line, p, fill=p<0.05),stat='identity', width=0.5,) +
+  scale_fill_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  geom_hline(yintercept=0.05) +
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~ eval)
+```
+
+```{r}
+ggplot(acrosscell_results, aes(pathway, p)) +
+  geom_bar(aes(pathway, p, fill=p<0.05),stat='identity', width=0.5,) +
+  scale_fill_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  geom_hline(yintercept=0.05) +
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~ eval)
+```
+
+```{r, fig.width=12,fig.height=5}
+axis_titles <- data.frame(
+  Species = c("Across cell lines", "Across pathways"),
+  axis_title = c("Pathway", "Cell line")
+)
+
+ggplot(metanalysis_results, aes(value, eval)) +
+  geom_point(aes(value, eval, colour = p<0.05,size=-log(p)), position = position_dodge(width = 0)) +
+  scale_colour_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  scale_size(name='-log(pvalue)')+
+  xlab(' ') + 
+  ylab('Method')+
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~across, scales = 'free_x')
+
+
+ggsave('metanalysisacross_stat.png',path='./results/', dpi=300)
+
+```
