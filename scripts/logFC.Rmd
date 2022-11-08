@@ -22,7 +22,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 cell_lines <- list.files('./results/', pattern='_.*\\.tsv$') %>% sub(pattern='_.*\\.tsv', replacement='') %>% unique()
 merged_data <- tibble()
 for(cell_line in cell_lines){
-  file_list <- list.files('./results/', pattern=paste(cell_line, '_.*__stat__cons__decoupleroutput.tsv', sep='')) %>% paste('./results/', ., sep='')
+  file_list <- list.files('./results/', pattern=paste(cell_line, '_.*__logFC__cons__decoupleroutput.tsv', sep='')) %>% paste('./results/', ., sep='')
   for(file in file_list) {
     file_data <- read_tsv(file, show_col_types=FALSE) %>% separate(...1, into=c('cell_line_treatment','norm', 'diffexp', 'dcmethod'), sep='__', remove=FALSE) %>% separate(cell_line_treatment, into=c('cell_line', 'treatment'), sep='_') %>%
       pivot_longer(cols=c('Androgen':ncol(.)), names_to = 'pathway', values_to = 'scores') %>% select(-dcmethod)
@@ -86,6 +86,15 @@ anova_df <- anova_df %>% rename(pval = `p-value`)
 ```
 
 ## Visualization
+```{r}
+ggplot(anova_df, aes(eval, pval, fill = ifelse(pval>0.05, 'non significant', 'significant'))) +
+  geom_bar(stat='identity', width=0.2) +
+  geom_hline(yintercept=0.05) +
+  facet_grid(cell_line ~ pathway)
+  
+
+
+```
 
 ```{r, fig.width=15,fig.height=7}
 
@@ -97,7 +106,7 @@ ggplot(anova_df, aes(eval, pathway), size=pval) +
   ylab('Pathways')+
   theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
   facet_grid(~ cell_line)
-ggsave('scatterpvals_stat.png',path='./results/', dpi=300)
+ggsave('scatterpvals_logFC.png',path='./results/', dpi=300)
 
 ```
 ```{r, fig.width=15,fig.height=7}
@@ -110,7 +119,7 @@ ggplot(anova_df, aes(cell_line, pathway), size=pval) +
   ylab('Pathways')+
   theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
   facet_grid(~ eval)
-ggsave('scatterpvalspathway_stat.png',path='./results/', dpi=300)
+ggsave('scatterpvalspathway_logFC.png',path='./results/', dpi=300)
 
 ```
 
@@ -164,6 +173,14 @@ for(pathway in pathways){
 metanalysis_results <- rbind(acrosscell_results, acrosspathways_results)
 ```
 
+```{r}
+ggplot(acrosspathways_results, aes(eval, p)) +
+  geom_bar(aes(cell_line, p, fill=p<0.05),stat='identity', width=0.5,) +
+  scale_fill_manual(name = 'Significance (pvalue < 0.05)', values = setNames(c('red','darkgrey'),c(T, F)))+
+  geom_hline(yintercept=0.05) +
+  theme(axis.text.x = element_text(angle = 45,hjust=1,vjust=1)) +
+  facet_grid(~ eval)
+```
 
 ```{r}
 ggplot(acrosscell_results, aes(pathway, p)) +
@@ -190,7 +207,6 @@ ggplot(metanalysis_results, aes(value, eval)) +
   facet_grid(~across, scales = 'free_x')
 
 
-ggsave('metanalysisacross_stat.png',path='./results/', dpi=300)
+ggsave('metanalysisacross_logFC.png',path='./results/', dpi=300)
 
 ```
-
