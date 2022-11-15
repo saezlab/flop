@@ -3,8 +3,15 @@
 .RData
 .Ruserdata
 data/*
+data
 *.tsv
 *.zip
 **/omnipathr-log/*
 *.pdf
 *.png
+.DS_Store
+.nextflow
+work
+.nextflow.log*
+*.pyc
+Stats.nb.html

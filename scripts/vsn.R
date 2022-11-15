@@ -30,7 +30,7 @@ vsn_norm <- function(data){
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
-dataset_id <- strsplit(counts_file, split='_')[[1]][1]
+dataset_id <- strsplit(counts_file, split='__')[[1]][1]
 results <- vsn_norm(counts)
 
 output_filename <- paste(dataset_id, 'vsn', 'norm', sep = '__') %>%

@@ -43,7 +43,7 @@ deseq2_analysis <- function(counts, metadata) {
 args <- commandArgs(trailingOnly = FALSE)
 counts_file <- args[grep("--counts",args)+1]
 meta_file <- args[grep("--meta",args)+1]
-dataset_id <- strsplit(counts_file, split='_')[[1]][1]
+dataset_id <- strsplit(counts_file, split='__')[[1]][1]
 counts <- read.table(file = counts_file, header = TRUE, sep = "\t", row.names=NULL)
 metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE, row.names=NULL)
 results <- deseq2_analysis(counts, metadata)
