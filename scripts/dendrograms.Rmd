@@ -9,6 +9,7 @@ library(ggplot2)
 library(nlme)
 library(rstudioapi)
 library(ggdendro)
+library(viridis)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ```
@@ -47,12 +48,46 @@ hcdata <- dendro_data_k(cluster, 11)
 source('dendro_helpers.R')
 ```
 
-```{r}
-cols <- c("#a9a9a9", "#1f77b4", "#ff7f0e", "#2ca02c")
+```{r, fig.height=10, fig.width=10}
+for (pipeline in pipelines){
+    filt_data <- merged_data %>% filter(pipeline==!!pipeline, statparam==!!statparam, pathway==!!pathway) %>% mutate(...1=sub(pattern = '__.*', '', ...1)) %>% column_to_rownames(.,'...1') 
+  cluster <- filt_data %>% dist() %>% hclust(., 'ave')
+  hcdata <- dendro_data_k(cluster, 11)
+  p <- plot_ggdendro(hcdata,
+                   filt_data,
+                   'cell_line',
+                   fan         = TRUE,
+                   label.size  = 1.5,
+                   nudge.label = 0.15,
+                   expand.y    = 0.8,
+                   nclust=11)
 
+  mytheme <- theme(panel.background = element_rect(fill = "black"))
+  
+  p <- p + theme_void() + mytheme 
+  
+  dendro <- p + geom_point(data     = filt_data, 
+                 aes(x    = match(rownames(filt_data), hcdata$labels$label),
+                     y    = -0.7,
+                     fill = as.factor(treatment)),
+                 size     = 1.5,
+                 shape    = 21,
+                 show.legend = FALSE) +
+    scale_fill_viridis(discrete = TRUE)
+  plotname=paste(pipeline,'fan_dendrogram.png', sep = '__' )
+  ggsave(filename=plotname, plot=dendro, height = 10, width=10)
+}
+
+
+
+```
+
+
+```{r}
 p <- plot_ggdendro(hcdata,
                    fan         = TRUE,
-                   label.size  = 2,
+                   scale.color = cols,
+                   label.size  = 4,
                    nudge.label = 0.15,
                    expand.y    = 0.8)
 
@@ -60,20 +95,22 @@ mytheme <- theme(panel.background = element_rect(fill = "black"))
 
 p <- p + theme_void() + mytheme
 
-p + geom_point(data     = filt_data, 
-               aes(x    = match(rownames(filt_data), hcdata$labels$label),
+p + geom_point(data     = mtcars, 
+               aes(x    = match(rownames(mtcars), hcdata$labels$label),
                    y    = -0.7,
-                   fill = as.factor(cell_line)),
+                   fill = as.factor(cyl)),
                size     = 5,
                shape    = 21,
                show.legend = FALSE) +
-  scale_fill_viridis(discrete = TRUE) +
-  geom_text(data      = filt_data, 
-            aes(x     = match(rownames(filt_data), hcdata$labels$label),
+  scale_fill_manual(values = c("white", "yellow", "red")) +
+  geom_text(data      = mtcars, 
+            aes(x     = match(rownames(mtcars), hcdata$labels$label),
                 y     = -0.7,
-                label = cell_line),
+                label = cyl),
             size = 3)
 ```
+
+
 
 ```{r}
 p1 <- plot_ggdendro(hcdata,
@@ -101,5 +138,9 @@ p2 <- ggplot(filt_data) +
   ylab(NULL)
 
 grid.arrange(p1, p2, ncol = 2, widths = 3:2)
+```
+
+```{r}
+
 ```
 
