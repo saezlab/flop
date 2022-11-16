@@ -100,66 +100,14 @@ for (pipeline in pipelines){
 
 
 ```{r}
-p <- plot_ggdendro(hcdata,
-                   fan         = TRUE,
-                   scale.color = cols,
-                   label.size  = 4,
-                   nudge.label = 0.15,
-                   expand.y    = 0.8)
-
-mytheme <- theme(panel.background = element_rect(fill = "black"))
-
-p <- p + theme_void() + mytheme
-
-p + geom_point(data     = mtcars, 
-               aes(x    = match(rownames(mtcars), hcdata$labels$label),
-                   y    = -0.7,
-                   fill = as.factor(cyl)),
-               size     = 5,
-               shape    = 21,
-               show.legend = FALSE) +
-  scale_fill_manual(values = c("white", "yellow", "red")) +
-  geom_text(data      = mtcars, 
-            aes(x     = match(rownames(mtcars), hcdata$labels$label),
-                y     = -0.7,
-                label = cyl),
-            size = 3)
-```
-
-
-
-```{r}
-p1 <- plot_ggdendro(hcdata,
-                    direction   = "lr",
-                    expand.y    = 0.15) +
-  theme(axis.text.x      = element_text(color = "#ffffff"),
-        panel.background = element_rect(fill  = "#ffffff"),
-        axis.ticks       = element_blank()) + 
-  scale_color_brewer(palette = "Set1") +
-  xlab(NULL) +
-  ylab(NULL)
-
-
-# 'bubblemap'
-p2 <- ggplot(filt_data) +
-  geom_point(aes(x      = 'cell_line',
-                 y      = rownames(filt_data),
-                 size   = scores,
-                 color  = cell_line),
-             show.legend = FALSE) +
-  scale_color_viridis(direction = -1, discrete=TRUE) +
-  theme_minimal() +
-  theme(axis.text.y = element_blank()) +
-  xlab(NULL) +
-  ylab(NULL)
-
-grid.arrange(p1, p2, ncol = 2, widths = 3:2)
-```
-
-```{r}
-rand_results <- 
-for(pathway in pathways){
-  remaining
+rand_results <- matrix(nrow = 5, ncol = 5, 0, dimnames = list(pipelines, pipelines)) %>% as.data.frame()
+row.names(rand_results)
+for(pipeline1 in pipelines){
+  for(pipeline2 in pipelines){
+    rand_result <- rand.index(cluster_results[[pipeline1]]$segments$clust, cluster_results[[pipeline2]]$segments$clust)
+    rand_results[pipeline1, pipeline2] <- rand_result
+    
+  }
   
 }
 ```
