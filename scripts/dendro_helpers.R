@@ -59,7 +59,7 @@ plot_ggdendro <- function(hcdata,
                           expand.y    = 0.1,
                           nclust=11) {
   
-  direction <- match.arg(direction) # if fan = FALSE
+  #direction <- match.arg(direction) # if fan = FALSE
   ybreaks   <- pretty(segment(hcdata)$y, n = nclust)
   ymax      <- max(segment(hcdata)$y)
   
@@ -99,7 +99,11 @@ plot_ggdendro <- function(hcdata,
   # labels
   labelParams <- set_labels_params(nrow(hcdata$labels), direction, fan)
   hcdata$labels$angle <- labelParams$angle
-  hcdata$labels <- match(rownames(metadata), hcdata$labels$label) %>% metadata[.,] %>% select(!!clusteringfact) %>% rename('bindingfact'=!!clusteringfact) %>% cbind(.,hcdata$labels)
+  hcdata$labels <- metadata %>%
+    rownames_to_column('label') %>%
+    inner_join(., hcdata$labels, by='label') %>%
+    rename('bindingfact'=!!clusteringfact) %>%
+    arrange(x)
 
   p <- p +
     geom_text(data        =  label(hcdata),
@@ -116,7 +120,7 @@ plot_ggdendro <- function(hcdata,
   
   # colors and limits
   if (!is.null(scale.color)) {
-    p <- p + scale_color_manual(values = scale.color)
+    p <- p + scale_color_discrete()
   }
   
   ylim <- -round(ymax * expand.y, 1)

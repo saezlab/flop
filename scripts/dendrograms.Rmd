@@ -39,22 +39,41 @@ pathways <- merged_data %>% distinct(pathway) %>% pull()
 ```
 
 ```{r}
-filt_data <- merged_data %>% filter(pipeline=='NA+deseq2', statparam==!!statparam, pathway==!!pathway) %>% mutate(...1=sub(pattern = '__.*', '', ...1)) %>% column_to_rownames(.,'...1') 
-cluster <- filt_data %>% dist() %>% hclust(., 'ave')
+filt_data <- merged_data %>% filter(pipeline=='NA+deseq2', statparam==!!statparam) %>% mutate(...1=sub(pattern = '__.*', '', ...1)) %>% rename(id=...1)
+numeric_data <- filt_data %>% pivot_wider(names_from=pathway, values_from=scores,id_cols = id)
+cluster <- numeric_data %>% dist() %>% hclust(., 'ave')
 
 ```
 ```{r}
-hcdata <- dendro_data_k(cluster, 11)
 source('dendro_helpers.R')
+statparam='stat'
+```
+
+
+```{r}
+cluster_results <- list()
+for (pipeline in pipelines){
+  filt_data <- merged_data %>% 
+    filter(pipeline==!!pipeline, statparam==!!statparam) %>% 
+    mutate(...1=sub(pattern = '__.*', '', ...1)) %>% 
+    rename(id=...1)
+  numeric_data <- filt_data %>% pivot_wider(names_from=pathway, values_from=scores,id_cols = id) %>% column_to_rownames('id')
+  cluster <- numeric_data %>% dist() %>% hclust(., 'ave')
+  hcdata <- dendro_data_k(cluster, 11)
+  cluster_results[[pipeline]] <- hcdata
+}
 ```
 
 ```{r, fig.height=10, fig.width=10}
 for (pipeline in pipelines){
-    filt_data <- merged_data %>% filter(pipeline==!!pipeline, statparam==!!statparam, pathway==!!pathway) %>% mutate(...1=sub(pattern = '__.*', '', ...1)) %>% column_to_rownames(.,'...1') 
-  cluster <- filt_data %>% dist() %>% hclust(., 'ave')
-  hcdata <- dendro_data_k(cluster, 11)
+  filt_data <- merged_data %>% 
+    filter(pipeline==!!pipeline, statparam==!!statparam) %>% 
+    mutate(...1=sub(pattern = '__.*', '', ...1)) %>% 
+    rename(id=...1)
+  metadata <- filt_data %>% select(-pathway, -scores) %>% distinct() %>% column_to_rownames(.,'id')
+  hcdata <- cluster_results[[pipeline]]
   p <- plot_ggdendro(hcdata,
-                   filt_data,
+                   metadata,
                    'cell_line',
                    fan         = TRUE,
                    label.size  = 1.5,
@@ -66,9 +85,9 @@ for (pipeline in pipelines){
   
   p <- p + theme_void() + mytheme 
   
-  dendro <- p + geom_point(data     = filt_data, 
-                 aes(x    = match(rownames(filt_data), hcdata$labels$label),
-                     y    = -0.7,
+  dendro <- p + geom_point(data     = metadata, 
+                 aes(x    = match(rownames(metadata), hcdata$labels$label),
+                     y    = -0.5,
                      fill = as.factor(treatment)),
                  size     = 1.5,
                  shape    = 21,
@@ -77,9 +96,6 @@ for (pipeline in pipelines){
   plotname=paste(pipeline,'fan_dendrogram.png', sep = '__' )
   ggsave(filename=plotname, plot=dendro, height = 10, width=10)
 }
-
-
-
 ```
 
 
@@ -141,6 +157,10 @@ grid.arrange(p1, p2, ncol = 2, widths = 3:2)
 ```
 
 ```{r}
-
+rand_results <- 
+for(pathway in pathways){
+  remaining
+  
+}
 ```
 
