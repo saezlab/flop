@@ -51,26 +51,32 @@ statparam='stat'
 
 
 ```{r}
-cluster_results <- list()
-for (pipeline in pipelines){
-  filt_data <- merged_data %>% 
-    filter(pipeline==!!pipeline, statparam==!!statparam) %>% 
-    mutate(...1=sub(pattern = '__.*', '', ...1)) %>% 
-    rename(id=...1)
-  numeric_data <- filt_data %>% pivot_wider(names_from=pathway, values_from=scores,id_cols = id) %>% column_to_rownames('id')
-  cluster <- numeric_data %>% dist() %>% hclust(., 'ave')
-  hcdata <- dendro_data_k(cluster, 11)
-  cluster_results[[pipeline]] <- hcdata
+clustering_k <- function(merged_data, k){
+  cluster_results <- list()
+  for (pipeline in pipelines){
+    filt_data <- merged_data %>% 
+      filter(pipeline==!!pipeline, statparam==!!statparam) %>% 
+      mutate(...1=sub(pattern = '__.*', '', ...1)) %>% 
+      rename(id=...1)
+    numeric_data <- filt_data %>% pivot_wider(names_from=pathway, values_from=scores,id_cols = id) %>% column_to_rownames('id')
+    cluster <- numeric_data %>% dist() %>% hclust(., 'ave')
+    hcdata <- dendro_data_k(cluster, k)
+    cluster_results[[pipeline]] <- hcdata
+  }
+  return(cluster_results)
 }
+
 ```
 
 ```{r, fig.height=10, fig.width=10}
+cluster_results <- clustering_k(merged_data, 32)
 for (pipeline in pipelines){
   filt_data <- merged_data %>% 
     filter(pipeline==!!pipeline, statparam==!!statparam) %>% 
     mutate(...1=sub(pattern = '__.*', '', ...1)) %>% 
     rename(id=...1)
   metadata <- filt_data %>% select(-pathway, -scores) %>% distinct() %>% column_to_rownames(.,'id')
+  
   hcdata <- cluster_results[[pipeline]]
   p <- plot_ggdendro(hcdata,
                    metadata,
@@ -100,15 +106,88 @@ for (pipeline in pipelines){
 
 
 ```{r}
-rand_results <- matrix(nrow = 5, ncol = 5, 0, dimnames = list(pipelines, pipelines)) %>% as.data.frame()
-row.names(rand_results)
-for(pipeline1 in pipelines){
-  for(pipeline2 in pipelines){
-    rand_result <- rand.index(cluster_results[[pipeline1]]$segments$clust, cluster_results[[pipeline2]]$segments$clust)
-    rand_results[pipeline1, pipeline2] <- rand_result
-    
+k_values <-c(2,3,4,5,11,32)
+rand_results_k <- list
+rand_results_long <- tibble()
+for(i in k_values){
+  rand_results <- matrix(nrow = 5, ncol = 5, 0, dimnames = list(pipelines, pipelines)) %>% as.data.frame()
+  row.names(rand_results)
+  cluster_results <- clustering_k(merged_data, i)
+  for(pipeline1 in pipelines){
+    for(pipeline2 in pipelines){
+      rand_result <- rand.index(cluster_results[[pipeline1]]$segments$clust, cluster_results[[pipeline2]]$segments$clust)
+      rand_results[pipeline1, pipeline2] <- rand_result
+    }
   }
   
+  rand_results_long <- rand_results %>% 
+    rownames_to_column(var='pipeline1') %>% 
+    pivot_longer(.,cols=-pipeline1, names_to = 'pipeline2', values_to = 'scores') %>%
+    mutate(k=i) %>%
+    rowwise() %>%
+    mutate(diff = paste(sort(c(pipeline1, pipeline2))[1], sort(c(pipeline1, pipeline2))[2],sep='_vs_')) %>% 
+    filter(pipeline1 != pipeline2) %>% 
+    distinct(diff,.keep_all = TRUE) %>%
+    rbind(., rand_results_long)
 }
 ```
+
+```{r, fig.height=4, fig_width=2}
+ggplot(rand_results_long, aes(x=k, y=scores, color=diff)) +
+  geom_point() +
+  ylim(0,1)
+
+```
+
+```{r, fig.height=5, fig.width=5}
+ggplot(rand_results_long, aes(x=factor(k), y=scores, fill=factor(k))) +
+  geom_bar(stat = 'identity') +
+  ylim(0,1) +
+  facet_grid(pipeline1 ~ pipeline2)
+```
+
+```{r}
+boxplots <- ggplot(rand_results_long, aes(x=diff, y=scores, fill=diff)) +
+  geom_boxplot() +
+  ylim(0.5,1) +
+  theme(axis.text.x = element_text(angle=45, vjust = 1, hjust=1),
+        plot.margin=margin(10,10,10,30))
+boxplots
+```
+
+```{r}
+boxplots <- ggplot(rand_results_long, aes(x=factor(k), y=scores, fill=factor(k))) +
+  geom_boxplot() +
+  ylim(0.5,1) +
+  theme(axis.text.x = element_text(angle=60, vjust = 0.9, hjust=1),
+        plot.margin=margin(10,10,10,30))
+boxplots
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
