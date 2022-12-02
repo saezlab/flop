@@ -1,0 +1,256 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(rstudioapi)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+data <- readRDS("./results/merged_data.rds") %>%
+  rename(obs_id = `...1`)
+```
+
+
+```{r}
+cor_results <- data %>%
+  group_by(statparam, resource, cell_line, treatment) %>%
+  group_split() %>%
+  purrr::map(., function(x) {
+    
+    to_cor <- x %>%
+      select(pipeline, scores, items) %>%
+      pivot_wider(names_from = pipeline, values_from = scores) %>%
+      column_to_rownames(var = "items") %>%
+      as.matrix()
+    
+    cor_results <- cor(to_cor, method = "spearman") %>%
+      as.data.frame() %>%
+      rownames_to_column(var = "feature_1") %>%
+      pivot_longer(-feature_1) %>%
+      mutate(statparam = unique(x$statparam), cell_line = unique(x$cell_line),
+             resource = unique(x$resource), treatment = unique(x$treatment))
+    
+    return(cor_results)
+    
+  }) %>%
+  bind_rows()
+```
+
+
+```{r}
+cor_filt_results <- cor_results %>%
+  subset(feature_1 != name) %>%
+  rowwise() %>%
+  mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+  distinct(id, statparam, cell_line, resource, treatment, .keep_all = T)
+```
+
+
+```{r}
+pdf("./results/total.pdf", width = 32, height = 10)
+ggplot(cor_filt_results,aes(x = id, y = value, fill = cell_line)) +
+  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+  guides(x = guide_axis(angle = 60)) +
+  geom_boxplot() 
+dev.off()
+```
+
+```{r}
+outlier_results <- cor_filt_results %>%
+  filter(statparam=='stat') %>%
+  filter(id=='NA+edger__tmm+limma'|id=='NA+edger__vsn+limma')
+```
+
+```{r}
+pdf("./results/zoom.pdf", width = 10, height = 5)
+ggplot(outlier_results,aes(x = id, y = value, fill = cell_line)) +
+  facet_grid(cols = vars(resource)) +
+  guides(x = guide_axis(angle = 60)) +
+  geom_boxplot()
+dev.off()
+```
+
+```{r}
+norm_cor_results <- data %>%
+  group_by(statparam, resource, cell_line, treatment) %>%
+  group_split() %>%
+  purrr::map(., function(x) {
+    
+    to_cor <- x %>%
+      select(norm, scores, items) %>%
+      pivot_wider(names_from = norm, values_from = scores, values_fn = {mean}) %>%
+      column_to_rownames(var = "items") %>%
+      as.matrix()
+    
+    cor_results <- cor(to_cor, method = "spearman") %>%
+      as.data.frame() %>%
+      rownames_to_column(var = "feature_1") %>%
+      pivot_longer(-feature_1) %>%
+      mutate(statparam = unique(x$statparam), cell_line = unique(x$cell_line),
+             resource = unique(x$resource), treatment = unique(x$treatment)
+             )
+    
+    return(cor_results)
+    
+  }) %>%
+  bind_rows()
+```
+
+```{r}
+norm_cor_filt_results <- norm_cor_results %>%
+  subset(feature_1 != name) %>%
+  rowwise() %>%
+  mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+  distinct(id, statparam, cell_line, resource, treatment, .keep_all = T)
+```
+
+```{r}
+pdf("./results/norm_test.pdf", width = 32, height = 10)
+norm_cor_filt_results %>%
+  subset(feature_1 != name) %>%
+  mutate(id = paste0(feature_1, "__", name)) %>%
+  ggplot(aes(x = id, y = value, fill = cell_line)) +
+  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+  guides(x = guide_axis(angle = 60)) +
+  geom_boxplot()
+dev.off()
+```
+
+
+```{r}
+diffexp_cor_results <- data %>%
+  group_by(statparam, resource, cell_line, treatment) %>%
+  group_split() %>%
+  purrr::map(., function(x) {
+    
+    to_cor <- x %>%
+      select(diffexp, scores, items) %>%
+      pivot_wider(names_from = diffexp, values_from = scores, values_fn = {mean}) %>%
+      column_to_rownames(var = "items") %>%
+      as.matrix()
+    
+    cor_results <- cor(to_cor, method = "spearman") %>%
+      as.data.frame() %>%
+      rownames_to_column(var = "feature_1") %>%
+      pivot_longer(-feature_1) %>%
+      mutate(statparam = unique(x$statparam), cell_line = unique(x$cell_line),
+             resource = unique(x$resource), treatment = unique(x$treatment)
+             )
+    
+    return(cor_results)
+    
+  }) %>%
+  bind_rows()
+```
+
+```{r}
+diffexp_cor_filt_results <- diffexp_cor_results %>%
+  subset(feature_1 != name) %>%
+  rowwise() %>%
+  mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+  distinct(id, statparam, cell_line, resource, treatment, .keep_all = T)
+```
+
+```{r}
+pdf("./results/diffexp_test.pdf", width = 32, height = 10)
+diffexp_cor_filt_results %>%
+  subset(feature_1 != name) %>%
+  mutate(id = paste0(feature_1, "__", name)) %>%
+  ggplot(aes(x = id, y = value, fill = cell_line)) +
+  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+  guides(x = guide_axis(angle = 60)) +
+  geom_boxplot()
+dev.off()
+```
+
+```{r}
+norm_methods <- c('vsn', 'log2quant', 'tmm', 'NA')
+for(norm_method in norm_methods){
+  filename <- paste("./results/",norm_method,"_test.pdf", sep = '')
+  norm_cor_results %>%
+    subset(feature_1 != name) %>%
+    rowwise() %>%
+    mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+    distinct(id, statparam, cell_line, resource, treatment, .keep_all = T) %>%
+    filter(feature_1 == !!norm_method | name==!!norm_method) %>%
+    ggplot(aes(x = id, y = value, fill = cell_line)) +
+    facet_grid(cols = vars(resource), rows=vars(statparam)) +
+    guides(x = guide_axis(angle = 60)) +
+    geom_boxplot()
+  ggsave(filename, device='pdf', dpi=300, width = 32, height = 10)
+}
+```
+
+```{r}
+max_corr <- cor_filt_results %>% 
+  filter(statparam=='stat') %>%
+  filter(resource=='msigdb_hallmarks') %>%
+  .[which.max(.$value),] 
+
+min_corr <- cor_filt_results %>% 
+  filter(statparam=='stat') %>%
+  filter(resource=='msigdb_hallmarks') %>%
+  .[which.min(.$value),] 
+  
+```
+
+```{r}
+max_data <- data %>%
+  filter(resource=='msigdb_hallmarks') %>%
+  filter(pipeline== max_corr$feature_1|pipeline==max_corr$name, cell_line== max_corr$cell_line, treatment==max_corr$treatment) %>%
+  mutate('plot'='max')
+
+min_data <- data %>%
+  filter(resource=='msigdb_hallmarks') %>%
+  filter(pipeline== min_corr$feature_1|pipeline==min_corr$name, cell_line== min_corr$cell_line, treatment==min_corr$treatment) %>%
+  mutate('plot'='min')
+
+plot_data <- rbind(max_data, min_data)
+```
+
+```{r}
+max_plot <- plot_data %>%
+  ggpubr::ggpaired(.,
+                 x='pipeline',
+                 y='scores',
+                 id='items',
+                 color='pipeline',
+                 ggtheme=cowplot::theme_cowplot(),
+                 facet.by = 'plot'
+                 )
+```
+
+
+
+
+
+```{r, fig.height=}
+final <- ggdraw() + draw_plot(max_plot, 0, 0, 1, 1) + draw_plot_label('A', 1, 0,) +
+    draw_plot_label('B', 0.57, 0)
+final
+```
+
+
+```{r}
+rank_comp<-ggplot(plot_data) +
+  geom_boxplot(aes(x = pipeline, y = scores, fill=pipeline))+
+  geom_point(aes(x = pipeline, y = scores)) +
+  geom_line(aes(x  = pipeline, y = scores, group = items), alpha=0.3) +
+  theme_cowplot() +
+  theme(axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        panel.spacing = unit(2,'lines'),
+        axis.text.x = element_text(angle=60, vjust=0.9, hjust=1),
+        legend.position = 'none'
+  ) +
+  facet_grid(~plot, scales = 'free')
+labeled_rank_comp <- ggdraw() + draw_plot(rank_comp, 0, 0, 1, 1) + draw_plot_label('A', 0, 1) +
+    draw_plot_label('B', 0.52, 1)
+save_plot('./results/rank_comp.pdf', labeled_rank_comp, device='pdf', dpi=300, base_height=6, base_width =6)
+```
+
+
+

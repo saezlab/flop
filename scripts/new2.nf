@@ -3,6 +3,7 @@ params.scripts_dir = "/mnt/c/Users/victo/Onedrive - Universidad Politécnica de 
 
 //normalization
 process normalize {
+    publishDir "$params.scripts_dir/results/norm_output", mode: 'copy'
  
     input:
     path scripts_dir
@@ -79,6 +80,7 @@ process diffexp_edger{
 
 //Differential expression output file merger
 process merge_de{
+    publishDir "$params.scripts_dir/results/dc_input", mode: 'copy'
  
     input:
     path scripts_dir
@@ -98,11 +100,12 @@ process merge_de{
 
 //Functional analysis 
 process func_decoupler{
-    publishDir "$params.scripts_dir/results", mode: 'move'
+    publishDir "$params.scripts_dir/results/dc_output", mode: 'move'
  
     input:
     path scripts_dir
     path(decoupler_files)
+    each resources
  
     output:
     path ('*__decoupleroutput.tsv')
@@ -110,7 +113,7 @@ process func_decoupler{
     script:
 
     """
-    python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files}
+    python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files} ${resources}
     """
 }
 
@@ -128,6 +131,10 @@ workflow {
     Channel
         .of('vsn', 'log2quant', 'tmm')
         .set{norm_methods}
+
+    Channel
+        .of('progeny', 'dorothea', 'msigdb_hallmarks')
+        .set{resources}
     
     //normalization channels
     normalize(params.scripts_dir,datasets, norm_methods)
@@ -153,7 +160,6 @@ workflow {
         //.view{"Decoupler input: $it \n"}
         .set {mergede}
     
-    func_decoupler(params.scripts_dir, mergede)
-        .view{"Decoupler output: $it"}
+    func_decoupler(params.scripts_dir, mergede, resources)
         .set {decoupler}
 }
