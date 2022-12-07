@@ -43,34 +43,32 @@ cor_results <- data %>%
 cor_filt_results <- cor_results %>%
   subset(feature_1 != name) %>%
   rowwise() %>%
-  mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+  mutate(id = paste0(sort(c(feature_1, name))[1], " - ", sort(c(feature_1, name))[2])) %>%
   distinct(id, statparam, cell_line, resource, treatment, .keep_all = T)
 ```
 
 
 ```{r}
-pdf("./results/total.pdf", width = 32, height = 10)
-ggplot(cor_filt_results,aes(x = id, y = value, fill = cell_line)) +
-  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+total_plot <- ggplot(cor_filt_results,aes(x = id, y = value, fill=id)) +
+  facet_grid(cols = vars(statparam), rows=vars(resource), labeller=labeller(
+    resource = c(dorothea = 'DoRothEA', msigdb_hallmarks = 'MSigDB Hallmarks', progeny='PROGENy'),
+    statparam = c(logFC = 'LogFC', stat = 'T values')
+  )) +
   guides(x = guide_axis(angle = 60)) +
-  geom_boxplot() 
-dev.off()
+  geom_boxplot() +
+  theme_cowplot()+
+  ylab('Score')+
+  theme(
+    legend.position = 'null',
+    axis.title.x = element_blank(),
+    plot.margin=margin(10,10,10,20)
+        )
+total_plot
+save_plot(filename = "./results/plots/total.png", plot = total_plot, device='png', dpi=300, base_height=10, base_width =10)
+
 ```
 
-```{r}
-outlier_results <- cor_filt_results %>%
-  filter(statparam=='stat') %>%
-  filter(id=='NA+edger__tmm+limma'|id=='NA+edger__vsn+limma')
-```
 
-```{r}
-pdf("./results/zoom.pdf", width = 10, height = 5)
-ggplot(outlier_results,aes(x = id, y = value, fill = cell_line)) +
-  facet_grid(cols = vars(resource)) +
-  guides(x = guide_axis(angle = 60)) +
-  geom_boxplot()
-dev.off()
-```
 
 ```{r}
 norm_cor_results <- data %>%
@@ -102,19 +100,28 @@ norm_cor_results <- data %>%
 norm_cor_filt_results <- norm_cor_results %>%
   subset(feature_1 != name) %>%
   rowwise() %>%
-  mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
+  mutate(id = paste0(sort(c(feature_1, name))[1], " - ", sort(c(feature_1, name))[2])) %>%
   distinct(id, statparam, cell_line, resource, treatment, .keep_all = T)
 ```
 
 ```{r}
-pdf("./results/norm_test.pdf", width = 32, height = 10)
-norm_cor_filt_results %>%
+pdf("./results/plots/norm_test.pdf", width = 5, height = 10)
+norm_corplot <- norm_cor_filt_results %>%
   subset(feature_1 != name) %>%
-  mutate(id = paste0(feature_1, "__", name)) %>%
-  ggplot(aes(x = id, y = value, fill = cell_line)) +
-  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+  mutate(id = paste0(feature_1, " - ", name)) %>%
+  ggplot(aes(x = id, y = value, fill = name))+
+  geom_boxplot() +
+  ylim(-0.7,1.2)+
+  scale_fill_manual(values=c( "grey", "grey", "#69b3a2"))+
+  scale_alpha_manual(values=c(0.1,0.1,1))+
+  facet_grid(cols = vars(statparam), rows=vars(resource)) +
   guides(x = guide_axis(angle = 60)) +
-  geom_boxplot()
+  theme_cowplot()+
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        strip.background.y = element_blank(),
+        strip.text.y = element_blank()
+        )
 dev.off()
 ```
 
@@ -154,21 +161,39 @@ diffexp_cor_filt_results <- diffexp_cor_results %>%
 ```
 
 ```{r}
-pdf("./results/diffexp_test.pdf", width = 32, height = 10)
-diffexp_cor_filt_results %>%
+pdf("./results/plots/diffexp_test.pdf", width = 5, height = 10)
+diffexp_corplot <- diffexp_cor_filt_results %>%
   subset(feature_1 != name) %>%
-  mutate(id = paste0(feature_1, "__", name)) %>%
-  ggplot(aes(x = id, y = value, fill = cell_line)) +
-  facet_grid(cols = vars(resource), rows=vars(statparam)) +
+  mutate(id = paste0(feature_1, " - ", name)) %>%
+  ggplot(aes(x = id, y = value, fill=name))+
+  scale_fill_manual(values=rep('grey',2))+
+  geom_boxplot() +
+  ylim(-0.7,1.2)+
+  facet_grid(cols = vars(statparam), rows=vars(resource)) +
   guides(x = guide_axis(angle = 60)) +
-  geom_boxplot()
+  theme_cowplot()+
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank()
+        )
 dev.off()
 ```
+```{r}
+aligned_plots <- egg::ggarrange(norm_corplot, diffexp_corplot, ncol = 2, widths = c(2,1))
+final <- ggdraw() + draw_plot(aligned_plots, 0, 0, 1, 1)
+save_plot(filename = './results/plots/split_methods_plots.png', plot = final, device='png', dpi=300, base_height=9, base_width =12)
+```
+
+
+
+
+
 
 ```{r}
 norm_methods <- c('vsn', 'log2quant', 'tmm', 'NA')
 for(norm_method in norm_methods){
-  filename <- paste("./results/",norm_method,"_test.pdf", sep = '')
+  filename <- paste("./results/plots/",norm_method,"_cellsplit_test.pdf", sep = '')
   norm_cor_results %>%
     subset(feature_1 != name) %>%
     rowwise() %>%
@@ -249,7 +274,7 @@ rank_comp<-ggplot(plot_data) +
   facet_grid(~plot, scales = 'free')
 labeled_rank_comp <- ggdraw() + draw_plot(rank_comp, 0, 0, 1, 1) + draw_plot_label('A', 0, 1) +
     draw_plot_label('B', 0.52, 1)
-save_plot('./results/rank_comp.pdf', labeled_rank_comp, device='pdf', dpi=300, base_height=6, base_width =6)
+save_plot('./results/plots/rank_comp.pdf', labeled_rank_comp, device='pdf', dpi=300, base_height=6, base_width =6)
 ```
 
 
