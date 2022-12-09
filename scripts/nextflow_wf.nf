@@ -1,5 +1,5 @@
 
-params.scripts_dir = "/mnt/c/Users/victo/Onedrive - Universidad Politécnica de Madrid/Documentos/1º Master/Internship/flop_benchmark/scripts"
+params.scripts_dir = projectDir
 
 //normalization
 process normalize {
@@ -121,7 +121,7 @@ process func_decoupler{
 
 workflow {
     Channel
-        .fromFilePairs('/mnt/c/Users/victo/Onedrive - Universidad Politécnica de Madrid/Documentos/1º Master/Internship/flop_benchmark/scripts/data/*_{*_countdata,*_metadata}.tsv')
+        .fromFilePairs("$params.scripts_dir/data/*_{*_countdata,*_metadata}.tsv")
         .set {datasets}
     
     Channel

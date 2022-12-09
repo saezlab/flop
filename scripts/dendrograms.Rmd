@@ -59,7 +59,6 @@ statparam='stat'
 clustering_k <- function(merged_data, k){
   cluster_results <- list()
   for(resource in resources){
-    items <- merged_data %>% distinct(items) %>% pull()
     for (pipeline in pipelines){
       filt_data <- merged_data %>% 
         filter(pipeline==!!pipeline, statparam==!!statparam, resource==!!resource) %>% 
@@ -101,9 +100,11 @@ for(resource in resources){
                      expand.y    = 0.8,
                      nclust=11)
   
-    mytheme <- theme(panel.background = element_rect(fill = "black"))
     
-    p <- p + theme_cowplot() + mytheme 
+    p <- p + theme_cowplot() + theme(line = element_blank(),
+                                     axis.ticks = element_blank(),
+                                     axis.title = element_blank(),
+                                     axis.text = element_blank())
     
     dendro <- p + geom_point(data     = metadata, 
                    aes(x    = match(rownames(metadata), hcdata$labels$label),
@@ -147,6 +148,7 @@ for(resource in resources){
   }
 }
 saveRDS(rand_results_long, './results/rand_results_long.Rds')
+rand_results_long <- read_rds('./results/rand_results_long.Rds')
 ```
 
 
@@ -163,11 +165,9 @@ boxplots
 
 
 ```{r}
-boxplot_k <- ggplot(rand_results_long, aes(x=factor(k), y=scores, fill=factor(k))) +
+boxplot_k <- ggplot(rand_results_long, aes(x=factor(k), y=scores)) +
   ggdist::stat_halfeye(
-    adjust = .5, 
-    width = .6, 
-    .width = 0, 
+    width = 0.8,
     justification = -.2, 
     point_colour = NA
   ) + 
@@ -176,24 +176,28 @@ boxplot_k <- ggplot(rand_results_long, aes(x=factor(k), y=scores, fill=factor(k)
     outlier.shape = NA
   ) +
   geom_point(
-    aes(color=factor(k)),
     position=ggpp::position_jitternudge(
-      x=-0.3,
-      width=0.1,
+      x=-0.2,
+      width=0.07,
       nudge.from = 'jittered'
-    )
+    ),
+    size=0.6
   ) +
   xlab('Number of K clusters')+
   ylab('Rand Index score')+
+  scale_x_discrete(labels=c(rep("", 4),"5",rep("", 4), "10",rep("", 4),"15",rep("", 4), "20",rep("", 4), "25",rep("", 4), "30",rep("", 2)))+
   cowplot::theme_cowplot()+
   theme(axis.text.x = element_text(vjust = 0, hjust=0.5),
         plot.margin=margin(10,10,10,20),
-        legend.position='none', 
-        axis.text.y.left = element_blank(), 
-        axis.title.y = element_blank(),
-        panel.spacing = unit(2,'lines')) +
+        legend.position='none',
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        panel.spacing = unit(2,'lines')
+        ) +
   
-  facet_grid(rows = vars(resource))
+  facet_grid(rows = vars(resource), labeller=labeller(
+    resource = c(dorothea = 'DoRothEA', msigdb_hallmarks = 'MSigDB Hallmarks', progeny='PROGENy')
+  ))
 ```
 
 ```{r}
@@ -215,29 +219,33 @@ boxplot_pipelines <- ggplot(rand_results_long, aes(x=diff, y=scores, fill=diff))
       x=-0.3,
       width=0.1,
       nudge.from = 'jittered'
-    )
+    ), size=0.6
   )+
   ylab('Rand Index score')+
   cowplot::theme_cowplot()+
   theme(axis.text.x = element_text(angle=45, vjust = 1, hjust=1),
         axis.title.x = element_blank(),
-        plot.margin=margin(10,20,10,70),
+        plot.margin=margin(10,10,10,30),
+        axis.text.y.left = element_blank(), 
+        axis.title.y = element_blank(),
         legend.position='none',
-        strip.background = element_blank(),
-        strip.text = element_blank(),
         panel.spacing = unit(2,'lines')
         ) +
-  facet_grid(rows = vars(resource))
+  
+  facet_grid(rows = vars(resource), labeller=labeller(
+    resource = c(dorothea = 'DoRothEA', msigdb_hallmarks = 'MSigDB Hallmarks', progeny='PROGENy')
+  ))
 
 
 ```
 
-```{r, fig.height=7, fig.width=10}
-aligned_plots <- egg::ggarrange(boxplot_pipelines, boxplot_k, ncol = 2)
+```{r}
+library(cowplot)
+aligned_plots <- egg::ggarrange(boxplot_k, boxplot_pipelines, ncol = 2, widths = c(2,1))
 final <- ggdraw() + draw_plot(aligned_plots, 0, 0, 1, 1) +
   draw_plot_label('A', 0, 1)+
-  draw_plot_label('B', 0.52, 1)
-save_plot(filename = './results/plots/rand_index_plots.pdf', plot = final, device='pdf', dpi=300, base_height=10, base_width =15)
+  draw_plot_label('B', 0.65, 1)
+save_plot(filename = './results/plots/rand_index_plots.png', plot = final, device='png', dpi=300, base_height=7.5, base_width =10)
 ```
 
 
