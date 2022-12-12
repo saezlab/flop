@@ -1,7 +1,6 @@
 import decoupler as dc
 import pandas as pd
 import sys
-from numpy.linalg import det
 
 #Input management
 input_file = sys.argv[1]

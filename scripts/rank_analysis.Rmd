@@ -274,7 +274,7 @@ rank_comp<-ggplot(plot_data) +
   facet_grid(~plot, scales = 'free')
 labeled_rank_comp <- ggdraw() + draw_plot(rank_comp, 0, 0, 1, 1) + draw_plot_label('A', 0, 1) +
     draw_plot_label('B', 0.52, 1)
-save_plot('./results/plots/rank_comp.pdf', labeled_rank_comp, device='pdf', dpi=300, base_height=6, base_width =6)
+save_plot('./results/plots/rank_comp.png', labeled_rank_comp, device='png', dpi=300, base_height=6, base_width =6)
 ```
 
 
