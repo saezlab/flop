@@ -2,7 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-data
+data_norun
 *.tsv
 *.zip
 **/omnipathr-log/*
