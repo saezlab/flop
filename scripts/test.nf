@@ -1,38 +1,27 @@
 params.scripts_dir = projectDir
 
-process normalize {
-    publishDir "$params.scripts_dir/results/$datasetID/norm_output", mode: 'copy'
- 
+process get_prsources{
+    publishDir "$params.scripts_dir/dc_resources", mode: 'move'
+
     input:
     path scripts_dir
-    tuple val(datasetID), val(dataID), path(counts), path(meta)
-    each norm_method
- 
+
     output:
-    tuple val(datasetID),val(dataID), path ('*__norm.tsv')
-    
+    path ("*__source.tsv")
+
     script:
+
     """
-    Rscript ${scripts_dir}/${norm_method}.R --counts ${counts}
+    python3 ${scripts_dir}/get_resources_dc.py
     """
 }
 
 //Database selection
 workflow {    
-    Channel
-        .fromFilePairs("$params.scripts_dir/data/*/*_{*_countdata,*_metadata}.tsv")
-        .map{it -> tuple it[1][0].parent.baseName, it[0], it[1][0], it[1][1]}
+    get_prsources(params.scripts_dir)
+        .map{it -> it.baseName.toString()}
+        .map{it -> it.replaceAll(/__source/, "")}
         .view()
-        .set{datasets}
-
-    Channel
-        .of('vsn', 'log2quant', 'tmm')
-        .set{norm_methods}
-    
-    //normalization channels
-    normalize(params.scripts_dir,datasets, norm_methods)
-        .combine(datasets, by: [0,1])
-        .view{"Normalization: $it"}
-        .set{normalised_vals}
+        .set {pr_sources}
 
 }

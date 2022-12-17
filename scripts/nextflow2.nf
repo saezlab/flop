@@ -1,6 +1,22 @@
 
 params.scripts_dir = projectDir
 
+process get_prsources{
+    publishDir "$params.scripts_dir/dc_resources", mode: 'copy'
+
+    input:
+    path scripts_dir
+
+    output:
+    path ("*__source.tsv")
+
+    script:
+
+    """
+    python3 ${scripts_dir}/get_resources_dc.py
+    """
+}
+
 //normalization
 process normalize {
     publishDir "$params.scripts_dir/results/$datasetID/norm_output", mode: 'copy'
@@ -95,7 +111,7 @@ process merge_de{
 
 //Functional analysis 
 process func_decoupler{
-    publishDir "$params.scripts_dir/results/$datasetID/dc_output", mode: 'move'
+    publishDir "$params.scripts_dir/results/$datasetID/dc_output", mode: 'copy'
  
     input:
     path scripts_dir
@@ -103,7 +119,7 @@ process func_decoupler{
     each resources
  
     output:
-    path ('*__decoupleroutput.tsv')
+    tuple val(datasetID), path ('*__decoupleroutput.tsv')
     
     script:
 
@@ -112,6 +128,41 @@ process func_decoupler{
     """
 }
 
+
+process decoupler_merger{
+    publishDir "$params.scripts_dir/results/$datasetID", mode: 'copy'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (decoupler_results)
+
+    output:
+    tuple val(datasetID), path ("*__result.tsv")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --files "${decoupler_results}"
+    """
+}
+
+process rank_analysis{
+    publishDir "$params.scripts_dir/results/$datasetID/plots", mode: 'move'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (analysis_results)
+
+    output:
+    path ("*.png")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/rank_analysis.R --file ${analysis_results}
+    """
+
+}
 
 
 workflow {
@@ -127,9 +178,11 @@ workflow {
     Channel
         .of('vsn', 'log2quant', 'tmm')
         .set{norm_methods}
-
-    Channel
-        .of('progeny', 'dorothea', 'msigdb_hallmarks')
+  
+    //Prior knowledge sources
+    get_prsources(params.scripts_dir)
+        .flatten()
+        .map{it -> it.baseName.toString().replaceAll(/__source/, "")}
         .set{resources}
     
     //normalization channels
@@ -152,10 +205,21 @@ workflow {
         //.view{"Differential analysis: $it \n"}
         .set {diffexpr_files}
     
+    
     merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods)
         //.view{"Decoupler input: $it \n"}
         .set {mergede}
     
     func_decoupler(params.scripts_dir, mergede, resources)
+        .groupTuple(by:0)
+        .map{it -> tuple(it[0],it[1].flatten())}
+        //.view{"Decoupler out: $it"}
         .set {decoupler}
+
+    decoupler_merger(params.scripts_dir, decoupler)
+        .set {merged_results}
+
+    rank_analysis(params.scripts_dir, merged_results)
+        .set {rank}
+
 }
