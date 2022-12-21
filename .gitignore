@@ -2,8 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-data/*
-data
+data_norun
 *.tsv
 *.zip
 **/omnipathr-log/*
@@ -15,3 +14,4 @@ work
 .nextflow.log*
 *.pyc
 Stats.nb.html
+heatmaps

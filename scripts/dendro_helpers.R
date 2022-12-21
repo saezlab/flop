@@ -48,16 +48,19 @@ set_labels_params <- function(nbLabels,
 }
 
 plot_ggdendro <- function(hcdata,
+                          metadata,
+                          clusteringfact,
                           direction   = c("lr", "rl", "tb", "bt"),
                           fan         = FALSE,
                           scale.color = NULL,
                           branch.size = 1,
                           label.size  = 3,
                           nudge.label = 0.01,
-                          expand.y    = 0.1) {
+                          expand.y    = 0.1,
+                          nclust=11) {
   
-  direction <- match.arg(direction) # if fan = FALSE
-  ybreaks   <- pretty(segment(hcdata)$y, n = 5)
+  #direction <- match.arg(direction) # if fan = FALSE
+  ybreaks   <- pretty(segment(hcdata)$y, n = nclust)
   ymax      <- max(segment(hcdata)$y)
   
   ## branches
@@ -96,13 +99,18 @@ plot_ggdendro <- function(hcdata,
   # labels
   labelParams <- set_labels_params(nrow(hcdata$labels), direction, fan)
   hcdata$labels$angle <- labelParams$angle
-  
+  hcdata$labels <- metadata %>%
+    rownames_to_column('label') %>%
+    inner_join(., hcdata$labels, by='label') %>%
+    rename('bindingfact'=!!clusteringfact) %>%
+    arrange(x)
+
   p <- p +
     geom_text(data        =  label(hcdata),
               aes(x       =  x,
                   y       =  y,
                   label   =  label,
-                  colour  =  factor(clust),
+                  colour  =  factor(bindingfact),
                   angle   =  angle),
               vjust       =  labelParams$vjust,
               hjust       =  labelParams$hjust,
@@ -112,7 +120,7 @@ plot_ggdendro <- function(hcdata,
   
   # colors and limits
   if (!is.null(scale.color)) {
-    p <- p + scale_color_manual(values = scale.color)
+    p <- p + scale_color_discrete()
   }
   
   ylim <- -round(ymax * expand.y, 1)
