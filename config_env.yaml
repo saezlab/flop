@@ -7,6 +7,7 @@ channels:
 dependencies:
   - r-base
   - python=3.10
+  - openjdk
   - r-tidyverse
   - pip
   - r-cowplot

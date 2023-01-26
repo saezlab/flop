@@ -1,5 +1,5 @@
 #Source: https://atrebas.github.io/post/2019-06-08-lightweight-dendrograms/
-#Functions written by Atrebas
+#Functions partly written by Atrebas
 
 dendro_data_k <- function(hc, k) {
   

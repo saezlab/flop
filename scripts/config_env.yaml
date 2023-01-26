@@ -1,0 +1,25 @@
+name: flop2
+channels:
+  - conda-forge
+  - bioconda
+  - r
+  - defaults
+dependencies:
+  - r-base
+  - python=3.10
+  - openjdk
+  - r-tidyverse
+  - pip
+  - r-cowplot
+  - r-egg
+  - r-fossil
+  - r-ggdendro
+  - r-ggdist
+  - r-ggpp
+  - bioconductor-edger
+  - bioconductor-deseq2
+  - bioconductor-vsn
+  - bioconductor-org.hs.eg.db
+  - pip:
+    - decoupler
+    - omnipath

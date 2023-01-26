@@ -3,10 +3,11 @@ library(tidyverse)
 args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset",args)+1]
 pipeline_files <- args[grep("--files",args)+1] %>% strsplit(., split=' ') %>% .[[1]] %>% as_tibble()
-bio_contexts <- pipeline_files %>% pull() %>% sub(pattern='__.*__.*__.*__decoupleroutput.tsv', replacement='') %>% unique()
-resources <- pipeline_files %>% filter(str_detect(.,pattern='__decoupleroutput.tsv')) %>% pull() %>% sub(pattern='__decoupleroutput.tsv', replacement='', .)%>% sub(pattern='.*__.*__.*__', replacement='', .) %>% unique()
+run_info <- pipeline_files %>% separate(sep='__', col=value, into=c('datasetID', 'biocontext', 'statparam', 'dcmethod', 'resource', 'ext')) %>% select(-ext)
+bio_contexts <- run_info %>% select(biocontext) %>% distinct() %>% pull()
+resources <- run_info %>% select(resource) %>% distinct() %>% pull()
+statparams <- run_info %>% select(statparam) %>% distinct() %>% pull()
 merged_data <- tibble()
-statparams <- c('stat', 'logFC')
 
 for(statparam in statparams){
   for(bio_context in bio_contexts){

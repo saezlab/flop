@@ -2,9 +2,10 @@ library(tidyverse)
 library(stats)
 library(cowplot)
 library(egg)
+library(rstudioapi)
 
 args <- commandArgs(trailingOnly = FALSE)
-datafile <- args[grep("--file",args)+1][2]
+datafile <- args[grep("--file",args) + 1][2]
 merged_data <- read_tsv(datafile)
 
 bio_context <- merged_data %>% distinct(bio_context) %>% pull()
@@ -15,13 +16,11 @@ items <- merged_data %>% distinct(items) %>% pull()
 cor_results <- merged_data %>%
   group_by(statparam, resource, bio_context) %>%
   group_split() %>%
-  print() %>% 
   purrr::map(., function(x) {
     to_cor <- x %>%
       select(pipeline, scores, items) %>%
       pivot_wider(names_from = pipeline, values_from = scores) %>%
       column_to_rownames(var = "items")
-    print(head(to_cor))
     
     cor_results <- cor(to_cor, method = "spearman") %>%
       as.data.frame() %>%
@@ -64,11 +63,12 @@ norm_cor_results <- merged_data %>%
   group_by(statparam, resource, bio_context) %>%
   group_split() %>%
   purrr::map(., function(x) {
-    
+
     to_cor <- x %>%
       select(norm, scores, items) %>%
       pivot_wider(names_from = norm, values_from = scores, values_fn = {mean}) %>%
       column_to_rownames(var = "items") %>%
+      select(order(colnames(.))) %>%
       as.matrix()
     
     cor_results <- cor(to_cor, method = "spearman") %>%
@@ -90,8 +90,6 @@ norm_cor_filt_results <- norm_cor_results %>%
   distinct(id, statparam, bio_context, resource, .keep_all = T)
 
 norm_corplot <- norm_cor_filt_results %>%
-  subset(feature_1 != name) %>%
-  mutate(id = paste0(feature_1, " - ", name)) %>%
   ggplot(aes(x = id, y = value, fill = name))+
   geom_boxplot() +
   ylim(-0.7,1.2)+
@@ -116,6 +114,7 @@ diffexp_cor_results <- merged_data %>%
       select(diffexp, scores, items) %>%
       pivot_wider(names_from = diffexp, values_from = scores, values_fn = {mean}) %>%
       column_to_rownames(var = "items") %>%
+      select(order(colnames(.))) %>%
       as.matrix()
     
     cor_results <- cor(to_cor, method = "spearman") %>%
@@ -130,17 +129,15 @@ diffexp_cor_results <- merged_data %>%
   }) %>%
   bind_rows()
 
-  diffexp_cor_filt_results <- diffexp_cor_results %>%
+diffexp_cor_filt_results <- diffexp_cor_results %>%
   subset(feature_1 != name) %>%
   rowwise() %>%
   mutate(id = paste0(sort(c(feature_1, name))[1], "__", sort(c(feature_1, name))[2])) %>%
   distinct(id, statparam, bio_context, resource, .keep_all = T)
 
 diffexp_corplot <- diffexp_cor_filt_results %>%
-  subset(feature_1 != name) %>%
-  mutate(id = paste0(feature_1, " - ", name)) %>%
   ggplot(aes(x = id, y = value, fill=name))+
-  scale_fill_manual(values=rep('grey',2))+
+  scale_fill_manual(values=rep('grey',3))+
   geom_boxplot() +
   ylim(-0.7,1.2)+
   facet_grid(cols = vars(statparam), rows=vars(resource)) +

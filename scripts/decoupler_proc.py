@@ -21,8 +21,8 @@ else:
     dc_result = dc.decouple(mat, network, weight=None)
 
 #Output formatting
-methods = ['mlm_estimate', 'ulm_estimate', 'wsum_norm', 'consensus_estimate']
-suffixes = ['mlm', 'ulm', 'wsum', 'cons']
+methods = ['consensus_estimate']
+suffixes = ['cons']
 selected_results = list(map(dc_result.get, methods))
 for i in range(len(methods)):
     newtags = [name + '__' + suffixes[i] for name in selected_results[i].index.values]
