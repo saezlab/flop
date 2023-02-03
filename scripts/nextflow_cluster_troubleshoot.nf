@@ -76,10 +76,12 @@ process func_decoupler{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+
+    publishDir "$params.scripts_dir/results/$datasetID/$status", mode: 'copy'
  
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), val(status), path(decoupler_files)
+    tuple val(datasetID), val(status), path(decoupler_files)
     each resources
  
     output:
@@ -115,7 +117,7 @@ process decoupler_merger{
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --status ${status} --file ${decoupler_results}
+    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --file ${decoupler_results}
     """
 }
 
@@ -166,54 +168,38 @@ process rand_index_analysis{
 }
 
 
-workflow {
+workflow {    
     Channel
-        .fromFilePairs("$params.scripts_dir/data/*/*_{*_countdata,*_metadata}.tsv")
-        .map{it -> tuple it[1][0].parent.baseName, it[0], it[1][0], it[1][1]}
+        .fromPath("$params.scripts_dir/results/files/*/*/*__result.tsv")
+        .map{it -> tuple it.parent.parent.baseName, it.parent.baseName, it}
+        //.collectFile() { it ->
+        //[ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
+        //}
+        //.map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
         //.view()
-        .set {datasets}
-    
-    Channel
-        .of('vsn_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
-        .set {pipelines}
-    
-    Channel
-        .of('filtered', 'unfiltered')
-        .set {status}
-  
-    Channel
-        .of('logFC', 'stat')
-        .set {diffexpr_methods}
-    
-    get_prsources(params.scripts_dir)
-        .flatten()
-        .map{it -> it.baseName.toString().replaceAll(/__source/, "")}
-        .set{resources}
-    
-    diffexp_analysis(params.scripts_dir, datasets, pipelines, status)
-        .groupTuple(by:[0,1,2])
-        //.view{"Differential analysis: $it \n"}
-        .set {diffexpr_files}
-    
-    merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods)
-        //.view{"Decoupler input: $it \n"}
-        .set {mergede}
-    
-    func_decoupler(params.scripts_dir, mergede, resources)
-        .collectFile() { it ->
-        [ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
-        }
-        .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
-        //.view()
-        .set {decoupler}
-
-    decoupler_merger(params.scripts_dir, decoupler)
+        .map{it -> tuple it[0].split("_")[0], it[2]}
+        .groupTuple(by:0)
+        .view()
         .set {merged_results}
+    
+    //get_prsources(params.scripts_dir)
+    //    .flatten()
+    //    .map{it -> it.baseName.toString().replaceAll(/__source/, "")}
+    //    .set{resources}
+    
+    //func_decoupler(params.scripts_dir, mergede, resources)
+    //    .groupTuple(by:[0,1])
+    //    .map{it -> tuple(it[0],it[1],it[2].flatten().collectFile(name: "${it[0]}__${it[1]}.txt"))}
+        //.view{"Decoupler out: $it"}
+    //    .set {decoupler}
 
-    rank_analysis(params.scripts_dir, merged_results)
-        .set {rank}
+    //decoupler_merger(params.scripts_dir, decoupler)
+    //    .set {merged_results}
 
-    rand_index_analysis(params.scripts_dir, merged_results)
-        .set {rank}
+    //rank_analysis(params.scripts_dir, merged_results)
+    //    .set {rank}
+
+    //rand_index_analysis(params.scripts_dir, merged_results)
+    //    .set {rank}
 
 }

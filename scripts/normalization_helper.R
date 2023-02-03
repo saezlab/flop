@@ -44,7 +44,7 @@ tmm_norm <- function(data) {
     as.matrix() %>%
     DGEList(count = .) %>%
     calcNormFactors(., method = "TMM") %>%
-    cpm(.) %>%
+    cpm(., log = T, prior.count = 3 ) %>%
     as_tibble(.) %>%
     mutate(ID = data$gene_symbol) %>%
     relocate(ID)
