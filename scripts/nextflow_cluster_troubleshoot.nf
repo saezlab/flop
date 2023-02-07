@@ -121,51 +121,74 @@ process decoupler_merger{
     """
 }
 
-//Rank analysis
-process rank_analysis{
-    cpus 2
-    memory '32 GB'
-	time '10h'
-    executor 'slurm'
+process subset_merger{
+    // cpus 2
+    // memory '32 GB'
+	// time '10h'
+    // executor 'slurm'
 
-    publishDir "$params.scripts_dir/results/plots", mode: 'move'
+    publishDir "$params.scripts_dir/results/fullmerged/", mode: 'copy'
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (analysis_results)
+    tuple val(datasetID), path (subset_files)
 
     output:
-    path ("*.png")
+    tuple val(datasetID), path("*fullmerge.tsv")
 
     script:
 
     """
-    Rscript ${scripts_dir}/rank_analysis.R --dataset ${datasetID} --status ${status} --file ${analysis_results}
+    Rscript ${scripts_dir}/subset_merger.R --dataset ${datasetID} --files "${subset_files}"
+    """
+}
+
+//Rank analysis
+process rank_analysis{
+    // cpus 2
+    // memory '32 GB'
+	// time '10h'
+    // executor 'slurm'
+
+    publishDir "$params.scripts_dir/results/rank", mode: 'move'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (analysis_results)
+
+    output:
+    tuple val(datasetID), path ("*__rank.tsv")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/rank_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
 //Rand index analysis
 process rand_index_analysis{
-    cpus 2
-    memory '32 GB'
-	time '10h'
-    executor 'slurm'
+    // cpus 2
+    // memory '32 GB'
+	// time '10h'
+    // executor 'slurm'
 
-    publishDir "$params.scripts_dir/results/plots", mode: 'move'
+    publishDir "$params.scripts_dir/results/rand_index", mode: 'move'
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (analysis_results)
+    tuple val(datasetID), path (analysis_results)
 
     output:
-    path ("*.png")
+    tuple val(datasetID), path ("*__randindex.tsv")
 
     script:
 
     """
-    Rscript ${scripts_dir}/rand_index_analysis.R --dataset ${datasetID} --status ${status} --file ${analysis_results}
+    Rscript ${scripts_dir}/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
+
 
 
 workflow {    
@@ -179,8 +202,10 @@ workflow {
         //.view()
         .map{it -> tuple it[0].split("_")[0], it[2]}
         .groupTuple(by:0)
-        .view()
-        .set {merged_results}
+        // .view()
+        .set {subset_results}
+    
+
     
     //get_prsources(params.scripts_dir)
     //    .flatten()
@@ -195,11 +220,13 @@ workflow {
 
     //decoupler_merger(params.scripts_dir, decoupler)
     //    .set {merged_results}
+    
+    subset_merger(params.scripts_dir, subset_results)
+        .set {full_results}
+    rank_analysis(params.scripts_dir, full_results)
+        .set {rank}
 
-    //rank_analysis(params.scripts_dir, merged_results)
-    //    .set {rank}
-
-    //rand_index_analysis(params.scripts_dir, merged_results)
-    //    .set {rank}
+    rand_index_analysis(params.scripts_dir, full_results)
+        .set {rank}
 
 }
