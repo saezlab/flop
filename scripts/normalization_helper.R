@@ -15,7 +15,7 @@ library(edgeR)
 #'
 #' @examples
 #' vsn_norm(gene_counts)
-vsn_norm <- function(data){
+vsn_norm <- function(data, ...){
   vsn_matrix <- data %>%
     select_if(is.numeric) %>%
     as.matrix(.) %>%
@@ -38,7 +38,7 @@ vsn_norm <- function(data){
 #'
 #' @examples
 #' tmm_norm(gene_counts)
-tmm_norm <- function(data) {
+tmm_norm <- function(data, ...) {
   tmm_matrix <- data %>%
     select_if(is.numeric) %>%
     as.matrix() %>%
@@ -64,7 +64,7 @@ tmm_norm <- function(data) {
 #'
 #' @examples
 #' log2quant_norm(gene_counts)
-log2quant_norm <- function(data) {
+log2quant_norm <- function(data, ...) {
   log2quant_matrix <- data %>%
     select_if(is.numeric)  %>%
     as.matrix() %>%
@@ -75,4 +75,19 @@ log2quant_norm <- function(data) {
     mutate(ID = data$gene_symbol) %>%
     relocate(ID)
   return(log2quant_matrix)
+}
+
+voom_norm <- function(data, metadata) {
+  designmat <- metadata %>%
+    select(sample_ID, group) %>%
+    model.matrix(~ 0 + group, data=.)
+  voom_mat <- data %>%
+    select_if(is.numeric) %>%
+    as.matrix() %>%
+    voom(., designmat) %>%
+    .$E %>%
+    as_tibble(.) %>%
+    mutate(ID = data$gene_symbol) %>%
+    relocate(ID)
+  return(voom_mat)
 }

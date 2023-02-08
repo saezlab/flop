@@ -13,10 +13,10 @@ dataset_id <- args[grep("--dataset",args)+1]
 status <- args[grep("--status", args) + 1]
 datafile <- args[grep("--file", args) + 1][2]
 
-dataset_id <- "GTex"
-path_file <- ""
-#status <- "filtered"
-datafile <- "GTex__randindex.tsv"
+# dataset_id <- "CCLE"
+# path_file <- ""
+# status <- "filtered"
+# datafile <- "CCLE__randindex.tsv"
 #source("dendro_helpers.R")
 
 rand_results_long <- read_tsv(datafile)

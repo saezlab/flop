@@ -106,14 +106,14 @@ process decoupler_merger{
     tuple val(datasetID), val(status), path (decoupler_results)
 
     output:
-    tuple val(datasetID), val(status), path ("*__result.tsv")
+    tuple val(datasetID), path ("*__result.tsv")
 
     //afterScript "rm -f ${decoupler_results}"
 
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --file ${decoupler_results}
+    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --file ${decoupler_results} --status ${status}
     """
 }
 
@@ -194,7 +194,7 @@ workflow {
         .set {datasets}
     
     Channel
-        .of('vsn_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
+        .of('vsn_norm limma_analysis', 'voom_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
         .set {pipelines}
     
     Channel
@@ -228,6 +228,8 @@ workflow {
         .set {decoupler}
 
     decoupler_merger(params.scripts_dir, decoupler)
+        .map{it -> tuple it[0].split("_")[0], it[1]}
+        .groupTuple(by:0)
         .set {subset_results}
 
     subset_merger(params.scripts_dir, subset_results)

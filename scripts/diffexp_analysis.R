@@ -1,7 +1,12 @@
 library(tidyverse)
 #library(rstudioapi)
-#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
+# counts_file <- "./data/CCLE_ABCDEF/BONE_v_BREAST__countdata.tsv"
+# meta_file <- "./data/CCLE_ABCDEF/BONE_v_BREAST__metadata.tsv"
+# pipeline <- c("voom_norm", "limma_analysis")
+# status <- "filtered"
+# path_file <- ""
 
 ###Main###
 args <- commandArgs(trailingOnly = FALSE)
@@ -35,7 +40,7 @@ if (status == 'filtered') {
 if (length(pipeline) == 2) {
     norm_func <- get(pipeline[1])
     diffexp_func <- get(pipeline[2])
-    results <- norm_func(newcounts) %>% diffexp_func(., metadata)
+    results <- norm_func(newcounts, metadata) %>% diffexp_func(., metadata)
 } else {
     diffexp_func <- get(pipeline[1])
     results <- diffexp_func(newcounts, metadata)

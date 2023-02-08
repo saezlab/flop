@@ -1,7 +1,7 @@
 library(tidyverse)
 library(nlme)
 library(fossil)
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 
 clustering_k <- function(merged_data, k, resource, status_i) {
   cluster_results <- list()
@@ -37,13 +37,14 @@ path_file <- args[grep("--file=", args)] %>%
   sub("--file=", "", .)
 dataset_id <- args[grep("--dataset",args)+1]
 datafile <- args[grep("--file", args) + 1][2]
+source(paste0(path_file, "dendro_helpers.R"))
 
-# dataset_id <- "GSE186341"
+# dataset_id <- "GTex"
 # path_file <- ""
 # status <- "filtered"
-# datafile <- "GSE186341__fullmerge.tsv"
-source(paste0(path_file, "dendro_helpers.R"))
-#source("dendro_helpers.R")
+# datafile <- "./results/full_merge/GTex__fullmerge.tsv"
+# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+# source("dendro_helpers.R")
 
 merged_data <- read_tsv(datafile)
 bio_context <- merged_data %>% distinct(bio_context) %>% pull()
@@ -59,8 +60,8 @@ for (status_i in status) {
   for (resource in resources) {
     for (i in k_values) {
       rand_results <- matrix(
-        nrow = 5,
-        ncol = 5,
+        nrow = length(pipelines),
+        ncol = length(pipelines),
         0,
         dimnames = list(pipelines, pipelines)
       ) %>%

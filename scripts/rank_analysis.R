@@ -62,9 +62,9 @@ datafile <- args[grep("--file", args) + 1][2]
 dataset_id <- args[grep("--dataset",args)+1]
 statparam <- 'stat'
 
-dataset_id <- "GTex"
-path_file <- ""
-datafile <- "./results/full_merge/GTex__fullmerge.tsv"
+# dataset_id <- "GTex"
+# path_file <- ""
+# datafile <- "./results/full_merge/GTex__fullmerge.tsv"
 
 merged_data <- read_tsv(datafile)
 cor_results <- corr_analysis(merged_data, "pipeline")
