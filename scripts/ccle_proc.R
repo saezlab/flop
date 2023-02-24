@@ -18,7 +18,7 @@ data_samples <- colnames(data)[-1]
 
 metadata <- data_samples %>% 
   as_tibble() %>%
-  separate(value, c('cell_line', 'group'), sep='_', extra='merge', remove=F)%>%
+  separate(value, c('cell_line', 'group'), sep='_', extra='merge', remove=F) %>%
   dplyr::rename('sample_ID'='value')
 
 thresh_meta <- metadata %>%
