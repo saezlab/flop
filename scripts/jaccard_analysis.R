@@ -1,6 +1,5 @@
 library(tidyverse)
 
-
 #' @title Jaccard index calculation
 #' @description This function calculates the Jaccard index between two lists of items for each pairwise comparison of pipelines
 #' @param data A list of dataframes containing n items for each pipeline

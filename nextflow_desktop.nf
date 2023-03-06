@@ -1,9 +1,8 @@
-
 params.scripts_dir = projectDir
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
-    publishDir "$params.scripts_dir/dc_resources", mode: 'copy'
+    publishDir "$params.scripts_dir/scripts/dc_resources", mode: 'copy'
 
     input:
     path scripts_dir
@@ -14,7 +13,7 @@ process get_prsources{
     script:
 
     """
-    python3 ${scripts_dir}/get_resources_dc.py
+    python3 ${scripts_dir}/scripts/get_resources_dc.py
     """
 }
 
@@ -22,17 +21,17 @@ process get_prsources{
 process diffexp_analysis{
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), path(counts), path(meta)
+    tuple val(subsetID), val(biocontext), path(counts), path(meta)
     each pipelines
     each status
  
     output:
-    tuple val(datasetID), val(biocontext), val(status), path("*__de.rds")
+    tuple val(subsetID), val(biocontext), val(status), path("*__de.rds")
     
     script:
 
     """
-    Rscript ${scripts_dir}/diffexp_analysis.R --dataset ${datasetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
+    Rscript ${scripts_dir}/scripts/diffexp_analysis.R --dataset ${subsetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
     """
 }
 
@@ -41,18 +40,18 @@ process merge_de{
     publishDir "$params.scripts_dir/results/$datasetID/$status/", mode: 'copy'
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), val(status), path(diffexpr_files)
+    tuple val(subsetID), val(biocontext), val(status), path(diffexpr_files)
     each method
  
     output:
-    tuple val(datasetID), val(biocontext), val(status), path ('*__decouplerinput.tsv')
+    tuple val(subsetID), val(biocontext), val(status), path ('*__decouplerinput.tsv')
 
     //afterScript "rm -f ${diffexpr_files}"
     
     script:
 
     """
-    Rscript ${scripts_dir}/merge_de.R --dataset ${datasetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
+    Rscript ${scripts_dir}/scripts/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
     """
 }
 
@@ -62,18 +61,18 @@ process func_decoupler{
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), val(status), path(decoupler_files)
+    tuple val(subsetID), val(biocontext), val(status), path(decoupler_files)
     each resources
  
     output:
-    tuple val(datasetID), val(status), path ('*__decoupleroutput.tsv')
+    tuple val(subsetID), val(status), path ('*__decoupleroutput.tsv')
 
     //afterScript "rm -f ${decoupler_files}"
     
     script:
 
     """
-    python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files} ${resources}
+    python3 ${scripts_dir}/scripts/decoupler_proc.py ${decoupler_files} ${resources}
     """
 }
 
@@ -83,51 +82,88 @@ process decoupler_merger{
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (decoupler_results)
+    tuple val(subsetID), val(status), path (decoupler_results)
 
     output:
-    tuple val(datasetID), val(status), path ("*__result.tsv")
+    tuple val(subsetID), path ("*__result.tsv")
+
+    //afterScript "rm -f ${decoupler_results}"
 
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --files "${decoupler_results}"
+    Rscript ${scripts_dir}/scripts/decoupler_merger.R --dataset ${subsetID} --file ${decoupler_results} --status ${status}
+    """
+}
+
+process subset_merger{
+    publishDir "$params.scripts_dir/results/fullmerged/", mode: 'copy'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (subset_files)
+
+    output:
+    tuple val(datasetID), path("*fullmerge.tsv")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/scripts/subset_merger.R --dataset ${datasetID} --files "${subset_files}"
     """
 }
 
 //Rank analysis
 process rank_analysis{
-    publishDir "$params.scripts_dir/results/$datasetID/$status/plots", mode: 'move'
+    publishDir "$params.scripts_dir/results/rank", mode: 'move'
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (analysis_results)
+    tuple val(datasetID), path (analysis_results)
 
     output:
-    path ("*.png")
+    tuple val(datasetID), path ("*__rank.tsv")
 
     script:
 
     """
-    Rscript ${scripts_dir}/rank_analysis.R --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rank_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
 //Rand index analysis
 process rand_index_analysis{
-    publishDir "$params.scripts_dir/results/$datasetID/$status/plots", mode: 'move'
+    publishDir "$params.scripts_dir/results/rand_index", mode: 'move'
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (analysis_results)
+    tuple val(datasetID), path (analysis_results)
 
     output:
-    path ("*.png")
+    tuple val(datasetID), path ("*__randindex.tsv")
 
     script:
 
     """
-    Rscript ${scripts_dir}/rand_index_analysis.R --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    """
+}
+
+//Rand index analysis
+process jaccard_analysis{
+    publishDir "$params.scripts_dir/results/jaccard", mode: 'move'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (analysis_results)
+
+    output:
+    tuple val(datasetID), path ("*__jaccard.tsv")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
@@ -140,7 +176,7 @@ workflow {
         .set {datasets}
     
     Channel
-        .of('vsn_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
+        .of('vsn_norm limma_analysis', 'voom_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
         .set {pipelines}
     
     Channel
@@ -166,18 +202,28 @@ workflow {
         .set {mergede}
     
     func_decoupler(params.scripts_dir, mergede, resources)
-        .groupTuple(by:[0,1])
-        .map{it -> tuple(it[0],it[1],it[2].flatten())}
-        .view{"Decoupler out: $it"}
+        .collectFile() { it ->
+        [ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
+        }
+        .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
+        //.view()
         .set {decoupler}
 
     decoupler_merger(params.scripts_dir, decoupler)
-        .set {merged_results}
+        .map{it -> tuple it[0].split("_")[0], it[1]}
+        .groupTuple(by:0)
+        .set {subset_results}
 
-    rank_analysis(params.scripts_dir, merged_results)
+    subset_merger(params.scripts_dir, subset_results)
+        .set {full_results}
+
+    rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    rand_index_analysis(params.scripts_dir, merged_results)
-        .set {rank}
+    rand_index_analysis(params.scripts_dir, full_results)
+        .set {randindex}
+
+    jaccard_analysis(params.scripts_dir, full_results)
+        .set {jaccard}
 
 }
