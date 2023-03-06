@@ -2,42 +2,13 @@ library(tidyverse)
 library(nlme)
 library(fossil)
 
-
-clustering_k <- function(merged_data, k, resource, status_i) {
-  cluster_results <- list()
-  for (pipeline in pipelines) {
-    filt_data <- merged_data %>%
-      filter(
-        pipeline == !!pipeline,
-        statparam == !!statparam,
-        resource == !!resource,
-        status == !!status_i
-        ) %>%
-      mutate(id = sub(pattern = "__.*", "", obs_id))
-    numeric_data <- filt_data %>%
-      pivot_wider(
-        names_from = items,
-        values_from = scores,
-        id_cols = id,
-        values_fn = {mean}
-      ) %>%
-      column_to_rownames("id")
-    cluster <- numeric_data %>%
-      dist() %>%
-      hclust(., "ave")
-    hcdata <- dendro_data_k(cluster, k)
-    cluster_results[[status_i]][[resource]][[pipeline]] <- hcdata
-  }
-  return(cluster_results)
-}
-
 args <- commandArgs(trailingOnly = FALSE)
 path_file <- args[grep("--file=", args)] %>%
   sub("rand_index_analysis.R", "", .) %>%
   sub("--file=", "", .)
 dataset_id <- args[grep("--dataset",args)+1]
 datafile <- args[grep("--file", args) + 1][2]
-source(paste0(path_file, "dendro_helpers.R"))
+source(paste0(path_file, "rand_index_helper.R"))
 
 # dataset_id <- "GTex"
 # path_file <- ""

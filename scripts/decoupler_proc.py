@@ -31,9 +31,3 @@ for i in range(len(methods)):
     output_file = input_file.replace('__decouplerinput.tsv', '__{}__{}__decoupleroutput.tsv'.format(suffixes[i], resource))
     dc_output.to_csv(output_file, sep='\t')
 
-
-
-
-
-
-

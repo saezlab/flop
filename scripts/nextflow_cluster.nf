@@ -1,4 +1,3 @@
-
 params.scripts_dir = projectDir
 
 //Downloads and stores prior knowledge sources
@@ -7,6 +6,7 @@ process get_prsources{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
 
     publishDir "$params.scripts_dir/dc_resources", mode: 'copy'
 
@@ -29,20 +29,22 @@ process diffexp_analysis{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
+    maxRetries 3
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), path(counts), path(meta)
+    tuple val(subsetID), val(biocontext), path(counts), path(meta)
     each pipelines
     each status
  
     output:
-    tuple val(datasetID), val(biocontext), val(status), path("*__de.rds")
+    tuple val(subsetID), val(biocontext), val(status), path("*__de.rds")
 
     script:
 
     """
-    Rscript ${scripts_dir}/diffexp_analysis.R --dataset ${datasetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
+    Rscript ${scripts_dir}/diffexp_analysis.R --dataset ${subsetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
     """
 }
 
@@ -52,21 +54,23 @@ process merge_de{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
+    maxRetries 3
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), val(status), path(diffexpr_files)
+    tuple val(subsetID), val(biocontext), val(status), path(diffexpr_files)
     each method
  
     output:
-    tuple val(datasetID), val(biocontext), val(status), path ('*__decouplerinput.tsv')
+    tuple val(subsetID), val(biocontext), val(status), path ('*__decouplerinput.tsv')
 
     //afterScript "rm -f ${diffexpr_files}"
     
     script:
 
     """
-    Rscript ${scripts_dir}/merge_de.R --dataset ${datasetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
+    Rscript ${scripts_dir}/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
     """
 }
 
@@ -76,14 +80,16 @@ process func_decoupler{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
+    maxRetries 3
  
     input:
     path scripts_dir
-    tuple val(datasetID), val(biocontext), val(status), path(decoupler_files)
+    tuple val(subsetID), val(biocontext), val(status), path(decoupler_files)
     each resources
  
     output:
-    tuple val(datasetID), val(status), path ('*__decoupleroutput.tsv')
+    tuple val(subsetID), val(status), path ('*__decoupleroutput.tsv')
 
     //afterScript "rm -f ${decoupler_files}"
     
@@ -100,20 +106,22 @@ process decoupler_merger{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
+    maxRetries 3
 
     input:
     path scripts_dir
-    tuple val(datasetID), val(status), path (decoupler_results)
+    tuple val(subsetID), val(status), path (decoupler_results)
 
     output:
-    tuple val(datasetID), path ("*__result.tsv")
+    tuple val(subsetID), path ("*__result.tsv")
 
     //afterScript "rm -f ${decoupler_results}"
 
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${datasetID} --file ${decoupler_results} --status ${status}
+    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${subsetID} --file ${decoupler_results} --status ${status}
     """
 }
 
@@ -122,6 +130,8 @@ process subset_merger{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
+    maxRetries 3
 
     publishDir "$params.scripts_dir/results/fullmerged/", mode: 'copy'
 
@@ -145,6 +155,7 @@ process rank_analysis{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
 
     publishDir "$params.scripts_dir/results/rank", mode: 'move'
 
@@ -168,6 +179,7 @@ process rand_index_analysis{
     memory '32 GB'
 	time '10h'
     executor 'slurm'
+    errorStrategy 'retry'
 
     publishDir "$params.scripts_dir/results/rand_index", mode: 'move'
 
@@ -182,6 +194,30 @@ process rand_index_analysis{
 
     """
     Rscript ${scripts_dir}/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    """
+}
+
+//Rand index analysis
+process jaccard_analysis{
+    cpus 2
+    memory '32 GB'
+	time '10h'
+    executor 'slurm'
+    errorStrategy 'retry'
+
+    publishDir "$params.scripts_dir/results/jaccard", mode: 'move'
+
+    input:
+    path scripts_dir
+    tuple val(datasetID), path (analysis_results)
+
+    output:
+    tuple val(datasetID), path ("*__jaccard.tsv")
+
+    script:
+
+    """
+    Rscript ${scripts_dir}/jaccard_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
@@ -239,6 +275,9 @@ workflow {
         .set {rank}
 
     rand_index_analysis(params.scripts_dir, full_results)
-        .set {rank}
+        .set {randindex}
+
+    jaccard_analysis(params.scripts_dir, full_results)
+        .set {jaccard}
 
 }

@@ -78,13 +78,3 @@ for (i in random_ident){
 }
   
 
-
-#metadata %>% 
-#  group_by(group) %>% 
-#  count() %>% 
-#  ggplot(.,aes(x=group,y=n, fill=n<100)) + 
-#  geom_col() +
-#  scale_fill_discrete('blue', 'green') +
-#  ggtitle('Threshold = 100') +
-#  theme(axis.text.x = element_text(angle=-60, vjust = 0, hjust=0), plot.margin = margin(r=30)) +
-#  geom_hline(aes(yintercept=100, color='red'))
