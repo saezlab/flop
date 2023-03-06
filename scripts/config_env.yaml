@@ -6,6 +6,7 @@ channels:
   - defaults
 dependencies:
   - r-base
+  - r-bayesbio
   - python=3.10
   - openjdk
   - r-tidyverse

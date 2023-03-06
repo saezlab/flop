@@ -8,7 +8,7 @@ process get_prsources{
     executor 'slurm'
     errorStrategy 'retry'
 
-    publishDir "$params.scripts_dir/dc_resources", mode: 'copy'
+    publishDir "$params.scripts_dir/scripts/dc_resources", mode: 'copy'
 
     input:
     path scripts_dir
@@ -19,7 +19,7 @@ process get_prsources{
     script:
 
     """
-    python3 ${scripts_dir}/get_resources_dc.py
+    python3 ${scripts_dir}/scripts/get_resources_dc.py
     """
 }
 
@@ -44,7 +44,7 @@ process diffexp_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/diffexp_analysis.R --dataset ${subsetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
+    Rscript ${scripts_dir}/scripts/diffexp_analysis.R --dataset ${subsetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
     """
 }
 
@@ -70,7 +70,7 @@ process merge_de{
     script:
 
     """
-    Rscript ${scripts_dir}/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
+    Rscript ${scripts_dir}/scripts/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}"
     """
 }
 
@@ -96,7 +96,7 @@ process func_decoupler{
     script:
 
     """
-    python3 ${scripts_dir}/decoupler_proc.py ${decoupler_files} ${resources}
+    python3 ${scripts_dir}/scripts/decoupler_proc.py ${decoupler_files} ${resources}
     """
 }
 
@@ -121,7 +121,7 @@ process decoupler_merger{
     script:
 
     """
-    Rscript ${scripts_dir}/decoupler_merger.R --dataset ${subsetID} --file ${decoupler_results} --status ${status}
+    Rscript ${scripts_dir}/scripts/decoupler_merger.R --dataset ${subsetID} --file ${decoupler_results} --status ${status}
     """
 }
 
@@ -145,7 +145,7 @@ process subset_merger{
     script:
 
     """
-    Rscript ${scripts_dir}/subset_merger.R --dataset ${datasetID} --files "${subset_files}"
+    Rscript ${scripts_dir}/scripts/subset_merger.R --dataset ${datasetID} --files "${subset_files}"
     """
 }
 
@@ -169,7 +169,7 @@ process rank_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/rank_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rank_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
@@ -193,7 +193,7 @@ process rand_index_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 
@@ -217,7 +217,7 @@ process jaccard_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/jaccard_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --file ${analysis_results}
     """
 }
 

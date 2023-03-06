@@ -1,5 +1,14 @@
 library(tidyverse)
 
+
+#' @title Jaccard index calculation
+#' @description This function calculates the Jaccard index between two lists of items for each pairwise comparison of pipelines
+#' @param data A list of dataframes containing n items for each pipeline
+#' @param pipelines A vector of pipeline names
+#' @return A matrix of Jaccard indices
+#' @export
+#' @examples
+#' jaccard_calc(data, pipelines)
 jaccard_calc <- function(data, pipelines) {
     item_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
     row.names(item_mat) <- pipelines
@@ -12,7 +21,13 @@ jaccard_calc <- function(data, pipelines) {
     return(item_mat)
 }
 
-
+#' @title Jaccard analysis
+#' @description This function calculates the Jaccard index for the top and bottom n scores for each pipeline, depending on the prior knowledge source.
+#' The resulting matrix is transformed into a long-format dataframe.
+#' @param merged_data A dataframe containing the scores and items for each pipeline
+#' @return A logn-format dataframe containing the Jaccard indices for every combination of pipelines
+#' @export
+#' @examples
 jaccard_analysis <- function(merged_data) {
     pipelines <- merged_data %>%
         distinct(pipeline) %>%
