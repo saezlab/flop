@@ -1,4 +1,5 @@
 params.scripts_dir = projectDir
+params.data_folder = "$params.scripts_dir/data"
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -170,7 +171,7 @@ process jaccard_analysis{
 
 workflow {
     Channel
-        .fromFilePairs("$params.scripts_dir/data/*/*_{*_countdata,*_metadata}.tsv")
+        .fromFilePairs("$params.data_folder/*/*_{*_countdata,*_metadata}.tsv")
         .map{it -> tuple it[1][0].parent.baseName, it[0], it[1][0], it[1][1]}
         //.view()
         .set {datasets}

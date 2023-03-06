@@ -1,4 +1,4 @@
-name: flop2
+name: flop_benchmark
 channels:
   - conda-forge
   - bioconda
