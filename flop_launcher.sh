@@ -1,6 +1,9 @@
-#!/bin/bash
+#!/bin/sh
+source $HOME/.bashrc
 # Change working directory to the directory where the script is located
-cd "$(dirname "$0")"
+cd -P -- "$(dirname -- "$0")"
+echo $PWD
+
 
 # Description: Install Nextflow
 # Check if Nextflow is already installed; if it is, skip step, if not, install it
@@ -19,13 +22,14 @@ if [ -d "$HOME/miniconda3/envs/flop_benchmark" ]; then
         echo "Conda environment flop_benchmark already exists, skipping creation"
 else
         echo "Conda environment flop_benchmark does not exist, creating it"
-        conda env create -f flop_benchmark/config_env.yaml
-        echo "Dependencies installed successfully"
+        conda env create -f scripts/config_env.yaml
+        echo "Dependencies installed successfully" 
 fi
+conda init bash
 conda activate flop_benchmark
 
 # Description: Run flop_benchmark
-echo "
+echo '
  Welcome to
  _______ _______ _______ _______ _______ _______ _______ _______
 |  _______ ___     _______ _______                              |
@@ -34,7 +38,7 @@ echo "
 | |.  __) |.  |___|.  |   |.  ____|                             |
 | |:  |   |:  1   |:  1   |:  |                                 |
 | |::.|   |::.. . |::.. . |::.|                                 |
-| `---'   `-------`-------`---'                                 |
+| `---'\''   `-------`-------`---'\''                                 |
 |  __                     __                        __          |
 | |  |--.-----.-----.----|  |--.--------.---.-.----|  |--.      |
 | |  _  |  -__|     |  __|     |        |  _  |   _|    <       |
@@ -46,15 +50,15 @@ echo "
  normalization and differential expression tools on the 
  resulting functional space, in the context of bulk RNA-seq data.
  
- "
+ '
 
 echo "Please specify your folder containing the data to be analysed: "
 read data_folder
 
-num_dirs = $(ls -l $data_folder | grep -c ^d)
+num_dirs=$(ls -l $data_folder | grep -c ^d)
 echo "Number of subsets found: $num_dirs"
 
-name_datasets = $(find . -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | uniq)
+name_datasets=$(find . -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | uniq)
 echo "Datasets found: $name_datasets"
 
 echo "
