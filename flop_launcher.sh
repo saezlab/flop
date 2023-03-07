@@ -1,5 +1,5 @@
-#!/bin/sh
-source $HOME/.bashrc
+#!/bin/bash
+source "$HOME/.bashrc"
 # Change working directory to the directory where the script is located
 cd -P -- "$(dirname -- "$0")"
 echo $PWD
@@ -17,6 +17,8 @@ else
 fi
 
 # Description: Install conda environment
+eval "$(conda shell.bash hook)"
+source ~/miniconda3/etc/profile.d/conda.sh
 # Check if conda env named flop_benchmark exists; if it does, skip step, if not, create it
 if [ -d "$HOME/miniconda3/envs/flop_benchmark" ]; then
         echo "Conda environment flop_benchmark already exists, skipping creation"
@@ -25,6 +27,7 @@ else
         conda env create -f scripts/config_env.yaml
         echo "Dependencies installed successfully" 
 fi
+
 conda init bash
 conda activate flop_benchmark
 
@@ -52,13 +55,13 @@ echo '
  
  '
 
-echo "Please specify your folder containing the data to be analysed: "
-read data_folder
+read -p "Please specify your folder containing the data to be analysed: " -i "/" -e data_folder
+echo $data_folder
 
-num_dirs=$(ls -l $data_folder | grep -c ^d)
+num_dirs=$(ls -l "$data_folder" | grep -c ^d)
 echo "Number of subsets found: $num_dirs"
 
-name_datasets=$(find . -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | uniq)
+name_datasets=$(find "$data_folder" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | uniq | tr '\n' ' ')
 echo "Datasets found: $name_datasets"
 
 echo "
@@ -80,7 +83,7 @@ Is this correct? (y/n)
 "
 read answer
 
-if [ $answer != "n" ]; then
+if [ $answer != "y" ]; then
         echo "Exiting"
         exit
 fi
@@ -88,10 +91,12 @@ fi
 # Run flop_benchmark
 if [ $option -eq 1 ]; then
         echo "Running flop_benchmark on a desktop computer"
-        ./nextflow run flop_benchmark.nf -C bq_slurm.config -profile local --data_folder $data_folder
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard --data_folder "$data_folder"
 elif [ $option -eq 2 ]; then
         echo "Running flop_benchmark on a slurm-controlled cluster"
-        ./nextflow run flop_benchmark.nf -C bq_slurm.config -profile cluster --data_folder $data_folder
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster --data_folder "$data_folder"
 else
         echo "Invalid option"
 fi
+
+
