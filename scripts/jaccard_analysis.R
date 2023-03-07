@@ -31,7 +31,7 @@ jaccard_analysis <- function(merged_data) {
     pipelines <- merged_data %>%
         distinct(pipeline) %>%
         pull()
-    cor_results <- merged_data %>%
+    jaccard_results <- merged_data %>%
         group_by(statparam, resource, bio_context, status, main_dataset) %>%
         group_split() %>%
         purrr::map(., function(x) {
@@ -73,7 +73,7 @@ jaccard_analysis <- function(merged_data) {
                 item_collector[[pipeline]] <- extreme_items
             }
 
-            cor_results <- jaccard_calc(item_collector, pipelines) %>%
+            jaccard_results <- jaccard_calc(item_collector, pipelines) %>%
                 as.data.frame() %>%
                 rownames_to_column(var = "feature_1") %>%
                 pivot_longer(-feature_1) %>%
@@ -85,7 +85,7 @@ jaccard_analysis <- function(merged_data) {
                     main_dataset = unique(x$main_dataset)
                 )
 
-            return(cor_results)
+            return(jaccard_results)
         }) %>%
         bind_rows() %>%
         subset(feature_1 != name) %>%
@@ -106,7 +106,7 @@ jaccard_analysis <- function(merged_data) {
             main_dataset,
             .keep_all = TRUE
         )
-    return(cor_results)
+    return(jaccard_results)
 }
 
 args <- commandArgs(trailingOnly = FALSE)
@@ -115,5 +115,5 @@ dataset_id <- args[grep("--dataset", args) + 1]
 
 merged_data <- read_tsv(datafile)
 jaccard_results <- jaccard_analysis(merged_data)
-write_tsv(cor_results, file = paste0(dataset_id, "__jaccard.tsv"))
+write_tsv(jaccard_results, file = paste0(dataset_id, "__jaccard.tsv"))
 

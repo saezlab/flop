@@ -94,10 +94,10 @@ fi
 # Run flop_benchmark
 if [ $option -eq 1 ]; then
         echo "Running flop_benchmark on a desktop computer"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard --data_folder "$data_folder" --parent_folder "$parent_folder"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder"
 elif [ $option -eq 2 ]; then
         echo "Running flop_benchmark on a slurm-controlled cluster"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster -resume --data_folder "$data_folder" --parent_folder "$parent_folder"
 else
         echo "Invalid option"
 fi
