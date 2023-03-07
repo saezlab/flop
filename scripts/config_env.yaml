@@ -17,6 +17,7 @@ dependencies:
   - r-ggdendro
   - r-ggdist
   - r-ggpp
+  - r-testthat
   - bioconductor-edger
   - bioconductor-deseq2
   - bioconductor-vsn
