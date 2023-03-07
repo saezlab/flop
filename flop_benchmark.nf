@@ -1,5 +1,7 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
+params.parent_folder = projectDir
+
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -38,7 +40,7 @@ process diffexp_analysis{
 
 //Merges the results from different pipelines
 process merge_de{
-    publishDir "$params.scripts_dir/results/$datasetID/$status/", mode: 'copy'
+
     input:
     path scripts_dir
     tuple val(subsetID), val(biocontext), val(status), path(diffexpr_files)
@@ -58,7 +60,6 @@ process merge_de{
 
 //Functional analysis 
 process func_decoupler{
-    publishDir "$params.scripts_dir/results/$datasetID/$status/", mode: 'copy'
 
     input:
     path scripts_dir
@@ -79,7 +80,6 @@ process func_decoupler{
 
 //Merges the results from DecoupleR
 process decoupler_merger{
-    publishDir "$params.scripts_dir/results/$datasetID/$status", mode: 'copy'
 
     input:
     path scripts_dir
@@ -98,7 +98,7 @@ process decoupler_merger{
 }
 
 process subset_merger{
-    publishDir "$params.scripts_dir/results/fullmerged/", mode: 'copy'
+    publishDir "$params.parent_folder/flop_benchmark_results/fullmerged/", mode: 'copy'
 
     input:
     path scripts_dir
@@ -116,7 +116,7 @@ process subset_merger{
 
 //Rank analysis
 process rank_analysis{
-    publishDir "$params.scripts_dir/results/rank", mode: 'move'
+    publishDir "$params.parent_folder/flop_benchmark_results/rank", mode: 'move'
 
     input:
     path scripts_dir
@@ -134,7 +134,7 @@ process rank_analysis{
 
 //Rand index analysis
 process rand_index_analysis{
-    publishDir "$params.scripts_dir/results/rand_index", mode: 'move'
+    publishDir "$params.parent_folder/flop_benchmark_results/rand_index", mode: 'move'
 
     input:
     path scripts_dir
@@ -152,7 +152,7 @@ process rand_index_analysis{
 
 //Rand index analysis
 process jaccard_analysis{
-    publishDir "$params.scripts_dir/results/jaccard", mode: 'move'
+    publishDir "$params.parent_folder/flop_benchmark_results/jaccard", mode: 'move'
 
     input:
     path scripts_dir

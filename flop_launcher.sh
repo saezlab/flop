@@ -6,8 +6,8 @@ echo $PWD
 
 
 # Description: Install Nextflow
-# Check if Nextflow is already installed; if it is, skip step, if not, install it
-if [ -f "./nextflow" ]; then
+# Check if the directory Nextflow is already installed; if it is, skip step, if not, install it
+if [ -f "nextflow" ]; then
         echo "Nextflow already installed, skipping installation"
 else
         echo "Nextflow not installed, installing it"
@@ -16,11 +16,12 @@ else
         echo "Nextflow installed successfully"
 fi
 
+
 # Description: Install conda environment
 eval "$(conda shell.bash hook)"
-source ~/miniconda3/etc/profile.d/conda.sh
+source $CONDA_PREFIX/etc/profile.d/conda.s./Data
 # Check if conda env named flop_benchmark exists; if it does, skip step, if not, create it
-if [ -d "$HOME/miniconda3/envs/flop_benchmark" ]; then
+if [ -d "$CONDA_PREFIX/envs/flop_benchmark" ]; then
         echo "Conda environment flop_benchmark already exists, skipping creation"
 else
         echo "Conda environment flop_benchmark does not exist, creating it"
@@ -58,10 +59,12 @@ echo '
 read -p "Please specify your folder containing the data to be analysed: " -i "/" -e data_folder
 echo $data_folder
 
+parent_folder=$(dirname $data_folder)
+
 num_dirs=$(ls -l "$data_folder" | grep -c ^d)
 echo "Number of subsets found: $num_dirs"
 
-name_datasets=$(find "$data_folder" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | uniq | tr '\n' ' ')
+name_datasets=$(find "$data_folder" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | cut -d"_" -f1 | sort | uniq | tr '\n' ' ')
 echo "Datasets found: $name_datasets"
 
 echo "
@@ -76,9 +79,9 @@ read option
 # Ask if config is correct, if not, exit
 echo "
 You have selected option $option.
-The data folder is $data_folder.
-The number of subsets found is $num_dirs.
-The datasets found are $name_datasets.
+Data folder is $data_folder.
+Number of subsets found: $num_dirs
+Datasets found: $name_datasets
 Is this correct? (y/n)
 "
 read answer
@@ -91,10 +94,10 @@ fi
 # Run flop_benchmark
 if [ $option -eq 1 ]; then
         echo "Running flop_benchmark on a desktop computer"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard --data_folder "$data_folder"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard --data_folder "$data_folder" --parent_folder "$parent_folder"
 elif [ $option -eq 2 ]; then
         echo "Running flop_benchmark on a slurm-controlled cluster"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster --data_folder "$data_folder"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder"
 else
         echo "Invalid option"
 fi
