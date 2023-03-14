@@ -11,7 +11,7 @@ if [ -f "nextflow" ]; then
         echo "Nextflow already installed, skipping installation"
 else
         echo "Nextflow not installed, installing it"
-        wget -qO- https://get.nextflow.io | bash
+        curl -s https://get.nextflow.io | bash
         chmod +x nextflow
         echo "Nextflow installed successfully"
 fi
@@ -19,7 +19,7 @@ fi
 
 # Description: Install conda environment
 eval "$(conda shell.bash hook)"
-source $CONDA_PREFIX/etc/profile.d/conda.s./Data
+# source $CONDA_PREFIX/etc/profile.d/conda.s./Data
 # Check if conda env named flop_benchmark exists; if it does, skip step, if not, create it
 if [ -d "$CONDA_PREFIX/envs/flop_benchmark" ]; then
         echo "Conda environment flop_benchmark already exists, skipping creation"

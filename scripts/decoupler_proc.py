@@ -6,7 +6,7 @@ import sys
 input_file = sys.argv[1]
 resource = sys.argv[2]
 scriptdir = sys.argv[0].replace('decoupler_proc.py', '')
-resource_file = '{}dc_resources/{}__source.tsv'.format(scriptdir,resource)
+resource_file = '{}dc_resources/{}__source.tsv'.format(scriptdir, resource)
 input_data = pd.read_csv(input_file, sep='\t').transpose()
 input_data.fillna(0, inplace=True)
 input_data.rename(columns = input_data.iloc[0], inplace=True)

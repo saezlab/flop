@@ -19,7 +19,7 @@ vsn_norm <- function(data, ...){
   vsn_matrix <- data %>%
     select_if(is.numeric) %>%
     as.matrix(.) %>%
-    justvsn(.) %>%
+    justvsn(., ...) %>%
     as_tibble(.) %>%
     mutate(ID = data$gene_symbol) %>%
     relocate(ID)
@@ -77,6 +77,19 @@ log2quant_norm <- function(data, ...) {
   return(log2quant_matrix)
 }
 
+#' voom normalization
+#' This function performs a voom transformation followed by a
+#' normalization of the data
+#' @param data a tibble containing gene counts, genes as rows and
+#' samples as columns
+#' @param metadata a tibble containing the sample_ID and group#'
+#' @return a tibble containing the voom normalised values of the data
+#' @importFrom dplyr %>% select select_if as_tibble add_column relocate
+#' @importFrom limma voom
+#' @export
+#'
+#' @examples
+#' voom_norm(gene_counts, metadata)
 voom_norm <- function(data, metadata) {
   designmat <- metadata %>%
     select(sample_ID, group) %>%
