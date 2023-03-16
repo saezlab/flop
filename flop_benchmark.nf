@@ -205,14 +205,14 @@ workflow {
   
     Channel
         .of('logFC', 'stat')
-        .view()
+        // .view()
         .set {diffexpr_methods}
     
     Channel
         .of(params.perturbation)
         .map{it -> it.split(" ")}
         .flatten()
-        .view{"Perturbation datasets: ${it}"}
+        // .view{"Perturbation datasets: ${it}"}
         .set{perturbation_datasets}
     
     get_prsources(params.scripts_dir)
@@ -261,7 +261,7 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    rand_index_analysis(params.scripts_dir, full_results)
+    rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets)
         .set {randindex}
 
     jaccard_analysis(params.scripts_dir, full_results)
