@@ -19,13 +19,13 @@ library(DESeq2)
 #' @examples
 #' limma_analysis(vsn_counts_exp1, metadata_exp1)
 limma_analysis <- function(data_norm, metadata){
-  norm_counts <- data_norm %>% select_if(is.numeric)
+  norm_counts <- data_norm %>% dplyr::select_if(is.numeric)
   
   metadata <- metadata %>%
-    select(sample_ID, group)
+    dplyr::select(sample_ID, group)
   
   designmat <- metadata %>%
-    select(sample_ID, group) %>%
+    dplyr::select(sample_ID, group) %>%
     model.matrix(~ 0 + group, data=.)
   studygroups <- levels(metadata$group)
   
@@ -41,7 +41,7 @@ limma_analysis <- function(data_norm, metadata){
     as_tibble() %>%
     mutate(ID = data_norm$ID) %>%
     dplyr::rename(padj = adj.P.Val, stat = t) %>%
-    select(ID, logFC, stat, padj)
+    dplyr::select(ID, logFC, stat, padj)
   
   return(results)
 }
@@ -65,7 +65,7 @@ deseq2_analysis <- function(counts, metadata) {
     as.data.frame(.)
   rownames(gene_counts) <- counts$gene_symbol
   gene_counts <- gene_counts %>% 
-    select(-gene_symbol)
+    dplyr::select(-gene_symbol)
   
   formatted_data <- DESeqDataSetFromMatrix(countData = gene_counts, 
                                            colData = metadata, 
@@ -78,7 +78,7 @@ deseq2_analysis <- function(counts, metadata) {
     as_tibble() %>%
     mutate(ID = counts$gene_symbol)  %>%
     dplyr::rename(logFC = log2FoldChange) %>%
-    select(ID, logFC, stat, padj)
+    dplyr::select(ID, logFC, stat, padj)
   return(results)
 }
 
@@ -97,10 +97,10 @@ deseq2_analysis <- function(counts, metadata) {
 #' @examples
 #' edger_analysis(vsn_results, metadata_cancer)
 edger_analysis <- function(counts, metadata) {
-  dge_obj <- counts %>% select_if(is.numeric) %>% DGEList(count=.)
+  dge_obj <- counts %>% dplyr::select_if(is.numeric) %>% DGEList(count=.)
   
   designmat <- metadata %>%
-    select(sample_ID, group) %>%
+    dplyr::select(sample_ID, group) %>%
     model.matrix(~ 0 + group, data=.)
   
   studygroups <- levels(metadata$group)
@@ -121,7 +121,7 @@ edger_analysis <- function(counts, metadata) {
     mutate(ID = counts$gene_symbol) %>%
     dplyr::rename(padj = FDR) %>%
     mutate(stat = sign(logFC) * sqrt(F)) %>%
-    select(ID, logFC, stat, padj)
+    dplyr::select(ID, logFC, stat, padj)
   
   return(results)
 }

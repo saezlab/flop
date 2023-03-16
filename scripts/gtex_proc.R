@@ -41,6 +41,8 @@ n=5
 
 for (i in random_ident){
   dir.create(paste("./data/GTex_", i, "/", sep=''))
+  megacounts <- tibble()
+  megametadata <- tibble()
   
   sampled_meta <- thresh_meta %>% 
     group_by(group) %>%
@@ -50,31 +52,9 @@ for (i in random_ident){
   sampled_data <- data %>% 
     dplyr::select(gene_symbol, sampled_meta$sample_ID)
   
-  comparisons <- character()
-  for (tissue1 in tissues){
-    for (tissue2 in tissues){
-      if (tissue1==tissue2){
-        break
-      }
-      else {
-        contrast <- paste0(sort(c(tissue1, tissue2))[1],'_v_', sort(c(tissue1, tissue2))[2])
-        if (contrast %in% comparisons){
-          break
-        }else{
-          comparisons <- c(comparisons, contrast)
-          sel_meta <- sampled_meta %>% filter(group == tissue1 | group == tissue2)
-          contr_samples <- sel_meta %>% dplyr::select(sample_ID) %>% pull()
-          sel_counts <- sampled_data %>% dplyr::select(gene_symbol,!!contr_samples) %>% group_by(gene_symbol) %>% summarise_all(sum)
-          
-          count_name <- paste("./data/GTex_", i, "/", paste(contrast, 'countdata.tsv', sep = '__'), sep='')
-          meta_name <- paste("./data/GTex_", i, "/", paste(contrast, 'metadata.tsv', sep='__'), sep='')
-          
-          write_tsv(sel_meta, meta_name)
-          write_tsv(sel_counts, count_name)
-        }
-      }
-    }
-  }
+  write_tsv(sampled_meta, paste("./data/GTex_", i, "/metadata.tsv", sep=''))
+  write_tsv(sampled_data, paste("./data/GTex_", i, "/countdata.tsv", sep=''))
+  
 }
   
 

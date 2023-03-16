@@ -1,7 +1,6 @@
 library(tidyverse)
 
-###Main###
-#get DE files from given dataset ID
+# get DE files from given dataset ID
 args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset",args)+1]
 biocontext <- args[grep("--bio",args)+1]

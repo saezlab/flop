@@ -21,14 +21,13 @@ biocontext <- args[grep("--bio", args) + 1]
 pipeline <- args[grep("--pipeline", args) + 1] %>%
     strsplit(., split = " ") %>%
     .[[1]]
-print(pipeline)
 
 source(paste0(path_file, "normalization_helper.R"))
 source(paste0(path_file, "diffexp_helper.R"))
 source(paste0(path_file, "filtering_helper.R"))
 
-counts <- read.table(file = counts_file, header = TRUE, sep = "\t")
-metadata <- read.table(file = meta_file, header = TRUE, sep = "\t", stringsAsFactors=TRUE)
+counts <- readRDS(counts_file)
+metadata <- readRDS(meta_file) %>% mutate(group = factor(group))
 
 if (status == 'filtered') {
     filt_func <- get('filtering')

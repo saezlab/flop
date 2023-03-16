@@ -1,7 +1,7 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-
+params.perturbation = ""
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -17,6 +17,22 @@ process get_prsources{
 
     """
     python3 ${scripts_dir}/scripts/get_resources_dc.py
+    """
+}
+
+//Performs filtering, normalisation and differential expression analysis
+process contrast_creator{
+    input:
+    path scripts_dir
+    tuple val(subsetID), path(subset_dir)
+ 
+    output:
+    path("*.rds")
+    
+    script:
+
+    """
+    Rscript ${scripts_dir}/scripts/contrast_creator.R --file_dir ${subset_dir}
     """
 }
 
@@ -139,9 +155,12 @@ process rand_index_analysis{
     input:
     path scripts_dir
     tuple val(datasetID), path (analysis_results)
+    each perturbation_dataset
 
     output:
     tuple val(datasetID), path ("*__randindex.tsv")
+
+    when: perturbation_dataset =~ datasetID
 
     script:
 
@@ -171,9 +190,9 @@ process jaccard_analysis{
 
 workflow {
     Channel
-        .fromFilePairs("$params.data_folder/*/*_{*_countdata,*_metadata}.tsv")
-        .map{it -> tuple it[1][0].parent.baseName, it[0], it[1][0], it[1][1]}
-        //.view()
+        .fromPath("$params.data_folder/*", type: 'dir')
+        .map{it -> tuple it[-1], it}
+        // .view()
         .set {datasets}
     
     Channel
@@ -186,14 +205,35 @@ workflow {
   
     Channel
         .of('logFC', 'stat')
+        .view()
         .set {diffexpr_methods}
+    
+    Channel
+        .of(params.perturbation)
+        .map{it -> it.split(" ")}
+        .flatten()
+        .view{"Perturbation datasets: ${it}"}
+        .set{perturbation_datasets}
     
     get_prsources(params.scripts_dir)
         .flatten()
         .map{it -> it.baseName.toString().replaceAll(/__source/, "")}
         .set{resources}
     
-    diffexp_analysis(params.scripts_dir, datasets, pipelines, status)
+    contrast_creator(params.scripts_dir, datasets)
+        .flatten()
+        // .view()
+        .map{it -> tuple (
+            it.name.toString().split("__")[0],
+            it.name.toString().split("__")[1],
+            it)}
+        // .view()
+        .groupTuple(by:[0,1])
+        .map{it -> tuple it[0], it[1], it[2][0], it[2][1]}
+        // .view()
+        .set {contrasts}
+
+    diffexp_analysis(params.scripts_dir, contrasts, pipelines, status)
         .groupTuple(by:[0,1,2])
         //.view{"Differential analysis: $it \n"}
         .set {diffexpr_files}

@@ -1,10 +1,19 @@
 library(tidyverse)
 library(stats)
-library(cowplot)
-library(egg)
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-## Rank Analysis: correlation
+#' @title Correlation analysis
+#' @description This function performs a pairwise rank correlation analysis, for a specific statistical parameter
+#' @param data A dataframe containing the data to be analysed
+#' @param corrparam A string containing the name of the statistical parameter to be used for the correlation analysis
+#' @return A dataframe containing the correlation results
+#' @importFrom dplyr %>% select add_column as_tibble rownames_to_column column_to_rownames
+#' @importFrom purrr map
+#' @importFrom tidyr pivot_wider pivot_longer
+#' @importFrom stats cor
+#' @export
+#' @examples
+#' corr_analysis(merged_data, "stats")
 corr_analysis <- function(data, corrparam) {
   cor_results <- merged_data %>%
     group_by(statparam, resource, bio_context, status, main_dataset) %>%

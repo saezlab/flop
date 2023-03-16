@@ -23,13 +23,26 @@ clustering_k <- function(merged_data, k, resource, status_i) {
     cluster <- numeric_data %>%
       dist() %>%
       hclust(., "ave")
-    hcdata <- dendro_data_k(cluster, k)
+    hcdata <- hc_calculator(cluster, k)
     cluster_results[[status_i]][[resource]][[pipeline]] <- hcdata
   }
   return(cluster_results)
 }
 
-dendro_data_k <- function(hc, k) {
+# insert roxygen skeleton:
+
+#' @title Hierarchical clustering calculator
+#' @description Creates k number of clusters and adds information to the hierarchical clustering object
+#' @param hc A hierarchical clustering object
+#' @param k number of clusters
+#' @importFrom ggdendro dendro_data
+#' @importFrom stats cutree
+#' @importFrom graphics cutree
+#' @return A list containing the hierarchical clustering object with additional information
+#' @export
+#' @examples
+#' hc_calculator(cluster_info, k)
+hc_calculator <- function(hc, k) {
   
   hcdata    <-  ggdendro::dendro_data(hc, type = "rectangle")
   seg       <-  hcdata$segments
@@ -54,104 +67,4 @@ dendro_data_k <- function(hc, k) {
   hcdata$labels$clust    <-  labclust
   
   hcdata
-}
-
-set_labels_params <- function(nbLabels,
-                              direction = c("tb", "bt", "lr", "rl"),
-                              fan       = FALSE) {
-  if (fan) {
-    angle       <-  360 / nbLabels * 1:nbLabels + 90
-    idx         <-  angle >= 90 & angle <= 270
-    angle[idx]  <-  angle[idx] + 180
-    hjust       <-  rep(0, nbLabels)
-    hjust[idx]  <-  1
-  } else {
-    angle       <-  rep(0, nbLabels)
-    hjust       <-  0
-    if (direction %in% c("tb", "bt")) { angle <- angle + 45 }
-    if (direction %in% c("tb", "rl")) { hjust <- 1 }
-  }
-  list(angle = angle, hjust = hjust, vjust = 0.5)
-}
-
-plot_ggdendro <- function(hcdata,
-                          metadata,
-                          clusteringfact,
-                          direction   = c("lr", "rl", "tb", "bt"),
-                          fan         = FALSE,
-                          scale.color = NULL,
-                          branch.size = 1,
-                          label.size  = 3,
-                          nudge.label = 0.01,
-                          expand.y    = 0.1,
-                          nclust=11) {
-  
-  #direction <- match.arg(direction) # if fan = FALSE
-  ybreaks   <- pretty(segment(hcdata)$y, n = nclust)
-  ymax      <- max(segment(hcdata)$y)
-  
-  ## branches
-  p <- ggplot() +
-    geom_segment(data         =  segment(hcdata),
-                 aes(x        =  x,
-                     y        =  y,
-                     xend     =  xend,
-                     yend     =  yend,
-                     linetype =  factor(line),
-                     colour   =  factor(clust)),
-                 lineend      =  "round",
-                 show.legend  =  FALSE,
-                 size         =  branch.size)
-  
-  ## orientation
-  if (fan) {
-    p <- p +
-      coord_polar(direction = -1) +
-      scale_x_continuous(breaks = NULL,
-                         limits = c(0, nrow(label(hcdata)))) +
-      scale_y_reverse(breaks = ybreaks)
-  } else {
-    p <- p + scale_x_continuous(breaks = NULL)
-    if (direction %in% c("rl", "lr")) {
-      p <- p + coord_flip()
-    }
-    if (direction %in% c("bt", "lr")) {
-      p <- p + scale_y_reverse(breaks = ybreaks)
-    } else {
-      p <- p + scale_y_continuous(breaks = ybreaks)
-      nudge.label <- -(nudge.label)
-    }
-  }
-  
-  # labels
-  labelParams <- set_labels_params(nrow(hcdata$labels), direction, fan)
-  hcdata$labels$angle <- labelParams$angle
-  hcdata$labels <- metadata %>%
-    rownames_to_column('label') %>%
-    inner_join(., hcdata$labels, by='label') %>%
-    rename('bindingfact'=!!clusteringfact) %>%
-    arrange(x)
-
-  p <- p +
-    geom_text(data        =  label(hcdata),
-              aes(x       =  x,
-                  y       =  y,
-                  label   =  label,
-                  colour  =  factor(bindingfact),
-                  angle   =  angle),
-              vjust       =  labelParams$vjust,
-              hjust       =  labelParams$hjust,
-              nudge_y     =  ymax * nudge.label,
-              size        =  label.size,
-              show.legend =  FALSE)
-  
-  # colors and limits
-  if (!is.null(scale.color)) {
-    p <- p + scale_color_discrete()
-  }
-  
-  ylim <- -round(ymax * expand.y, 1)
-  p    <- p + expand_limits(y = ylim)
-  
-  p
 }

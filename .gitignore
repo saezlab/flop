@@ -17,3 +17,6 @@ Stats.nb.html
 heatmaps
 *.gz
 *.svg
+*.rds
+*.html
+nextflow

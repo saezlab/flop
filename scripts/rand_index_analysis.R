@@ -10,13 +10,6 @@ dataset_id <- args[grep("--dataset",args)+1]
 datafile <- args[grep("--file", args) + 1][2]
 source(paste0(path_file, "rand_index_helper.R"))
 
-# dataset_id <- "GTex"
-# path_file <- ""
-# status <- "filtered"
-# datafile <- "./results/full_merge/GTex__fullmerge.tsv"
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-# source("dendro_helpers.R")
-
 merged_data <- read_tsv(datafile)
 bio_context <- merged_data %>% distinct(bio_context) %>% pull()
 pipelines <- merged_data %>% distinct(pipeline) %>% pull()
@@ -56,11 +49,12 @@ for (status_i in status) {
           values_to = "scores"
         ) %>%
         mutate(k = i) %>%
+        mutate(k = i, main_dataset = !!dataset_id) %>%
         rowwise() %>%
         mutate(
-          diff = paste(
+          id = paste(
             sort(c(pipeline1, pipeline2))[1],
-            sort(c(pipeline1, pipeline2))[2], sep = " - "
+            sort(c(pipeline1, pipeline2))[2], sep = "-"
           ),
           resource = !!resource,
           status = !!status_i

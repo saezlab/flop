@@ -24,9 +24,10 @@ jaccard_calc <- function(data, pipelines) {
 #' @description This function calculates the Jaccard index for the top and bottom n scores for each pipeline, depending on the prior knowledge source.
 #' The resulting matrix is transformed into a long-format dataframe.
 #' @param merged_data A dataframe containing the scores and items for each pipeline
-#' @return A logn-format dataframe containing the Jaccard indices for every combination of pipelines
+#' @return A long-format dataframe containing the Jaccard indices for every combination of pipelines
 #' @export
 #' @examples
+#' jaccard_analysis(merged_data)
 jaccard_analysis <- function(merged_data) {
     pipelines <- merged_data %>%
         distinct(pipeline) %>%

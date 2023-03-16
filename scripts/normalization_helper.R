@@ -19,7 +19,7 @@ vsn_norm <- function(data, ...){
   vsn_matrix <- data %>%
     select_if(is.numeric) %>%
     as.matrix(.) %>%
-    justvsn(., ...) %>%
+    justvsn(.) %>%
     as_tibble(.) %>%
     mutate(ID = data$gene_symbol) %>%
     relocate(ID)
@@ -92,7 +92,7 @@ log2quant_norm <- function(data, ...) {
 #' voom_norm(gene_counts, metadata)
 voom_norm <- function(data, metadata) {
   designmat <- metadata %>%
-    select(sample_ID, group) %>%
+    dplyr::select(sample_ID, group) %>%
     model.matrix(~ 0 + group, data=.)
   voom_mat <- data %>%
     select_if(is.numeric) %>%
