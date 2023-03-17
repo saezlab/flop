@@ -61,10 +61,10 @@ read -p "Please specify your folder containing the data to be analysed: " -e dat
 parent_folder=$(dirname $data_folder)
 
 # num_dirs=$(ls -l "$data_folder" | grep -c ^d)
-num_dirs=$(find "$data_folder" -mindepth 1 -maxdepth 1 -not -empty -type d -printf '%f\n' | wc -l)
+num_dirs=$(ls -ld */ | awk '{if ($5 != 0) print $9}' | tr -d "/" | wc -l)
 echo "Number of subsets found: $num_dirs"
 
-name_datasets=$(find "$data_folder" -mindepth 1 -maxdepth 1 -not -empty -type d -printf '%f\n' | cut -d"_" -f1 | sort | uniq | tr '\n' ' ')
+name_datasets=$(ls -ld */ | awk '{if ($5 != 0) print $9}' | tr -d "/" | cut -d"_" -f1 | sort | uniq | tr '\n' ' ')
 echo "Datasets found: $name_datasets"
 
 echo "
