@@ -93,7 +93,7 @@ You have selected option $option.
 Data folder is $data_folder.
 Number of subsets found: $num_dirs
 Datasets found: $name_datasets
-Perturbational atasets included in the Rand Index analysis: $perturbation_array
+Perturbational datasets included in the Rand Index analysis: $perturbation_array
 
 Proceed? (y/n): "
 read answer
@@ -106,10 +106,10 @@ fi
 # Run flop_benchmark
 if [ $option -eq 1 ]; then
         echo "Running flop_benchmark on a desktop computer"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
 elif [ $option -eq 2 ]; then
         echo "Running flop_benchmark on a slurm-controlled cluster"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
+        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
 else
         echo "Invalid option, aborting"
         exit

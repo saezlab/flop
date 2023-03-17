@@ -60,7 +60,7 @@ for (status_i in status) {
           status = !!status_i
         ) %>%
         filter(pipeline1 != pipeline2) %>%
-        distinct(diff, .keep_all = TRUE) %>%
+        distinct(id, .keep_all = TRUE) %>%
         rbind(., rand_results_long)
     }
   }
