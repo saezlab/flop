@@ -1,6 +1,8 @@
 library(tidyverse)
 library(stats)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# Data import
 files_info <- tibble()
 rank_info <- list.files(
     path = "../results/rank/",
@@ -116,14 +118,48 @@ for (resource in resources) {
 }
 
 
-results_rank %>%
-filter(main_dataset == !!dataset) %>%
-group_by(status)%>%
-summarise(mean = mean(value), sd = sd(value)
-)
+rank_corr_mean <- results_rank %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, id, status, resource) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8)
 
+rank_corr_mean_perc <- rank_corr_mean %>%
+    group_by(main_dataset, resource) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+jaccard_mean <- results_jaccard %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, id, status, resource) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.5 = mean>0.5)
 
+jaccard_corr_mean_perc <- jaccard_mean %>%
+    group_by(main_dataset, resource) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+rand_mean <- results_randindex %>%
+    group_by(main_dataset, id, status, resource, k) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8)
 
+rank_corr_mean_perc <- rand_mean %>%
+    group_by(main_dataset, resource, k) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), k = unique(x$k), resource = unique(x$resource), perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+# Barplots:
+# Rank
+rank_corr_mean_perc %>%
+    ggplot(aes(x = main_dataset, y = perc_0.8, fill = resource)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    cowplot::theme_cowplot() +
+    theme()

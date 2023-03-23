@@ -194,7 +194,9 @@ plotter <- function(results_df, category) {
                         `dorothea` = "DoRothEA",
                         `msigdb_hallmarks` = "MSigDB Hallmarks",
                         `progeny` = "PROGENy",
-                        `Rank correlation`= "Rank correlation"))) +
+                        `Rank correlation`= "Rank correlation",
+                        `Rand Index`= "Rand Index",
+                        `Jaccard Index`= "Jaccard Index"))) +
                 theme_cowplot() +
                 theme(
                     axis.text.y = element_blank(),
