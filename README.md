@@ -1,5 +1,3 @@
-# Add instructions to readme
-
 Created time: March 16, 2023 5:52 PM
 Status: In progress
 
