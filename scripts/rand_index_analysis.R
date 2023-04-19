@@ -2,6 +2,11 @@ library(tidyverse)
 library(nlme)
 library(fossil)
 
+datafile <- "../results/rand_index/GSE186341__randindex.tsv"
+dataset_id <- "GSE186341"
+path_file <- "./scripts/"
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 args <- commandArgs(trailingOnly = FALSE)
 path_file <- args[grep("--file=", args)] %>%
   sub("rand_index_analysis.R", "", .) %>%
@@ -33,7 +38,7 @@ for (status_i in status) {
       cluster_results <- clustering_k(merged_data, i, resource, status_i)
       for (pipeline1 in pipelines) {
         for (pipeline2 in pipelines) {
-          rand_result <- rand.index(
+          rand_result <- adj.rand.index(
             cluster_results[[status_i]][[resource]][[pipeline1]]$segments$clust,
             cluster_results[[status_i]][[resource]][[pipeline2]]$segments$clust
           )
@@ -66,4 +71,9 @@ for (status_i in status) {
   }
 }
 
+summary_sd <- rand_results_long %>%
+  group_by(k, resource) %>%
+  summarise(main_dataset = dataset_id, sd = sd(scores))
+
 write_tsv(rand_results_long, file = paste0(dataset_id, "__randindex.tsv"))
+write_tsv(summary_sd, file = paste0(dataset_id, "__summary__randindex.tsv"))

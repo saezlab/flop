@@ -90,9 +90,9 @@ randindex_reader <- function(path) {
 }
 
 results_randindex <- files_info %>%
-    filter(analysis == "randindex", dataset == "GSE186341") %>%
+    filter(analysis == "randindex", type == "randindex.tsv", dataset == "GSE186341") %>%
     pull(path) %>%
-    lapply(., randindex_reader) %>%
+    lapply(., read_tsv) %>%
     bind_rows() %>%
     filter(k == "11" | k == "32") %>%
     dplyr::rename(value = scores)
@@ -110,49 +110,57 @@ wilcox_rand_results <- list()
 resources <- results_randindex %>%
     distinct(resource) %>%
     pull()
+k_vals <- c("22", "32", "2")
 for (resource in resources) {
-    wilcox_rand_data <- results_randindex %>%
-        filter(resource == !!resource)
-    wilcox_rand_results[["k issue"]][[resource]] <- wilcox.test(value ~ k, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
-    wilcox_rand_results[["filtering"]][[resource]] <- wilcox.test(value ~ status, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+    for (k in k_vals) {
+        wilcox_rand_data <- results_randindex %>%
+            filter(resource == !!resource, k == !!k)
+        wilcox_rand_results[[resource]][[k]] <- wilcox.test(value ~ status, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+    }
 }
 
 
 rank_corr_mean <- results_rank %>%
     filter(statparam == "stat") %>%
     group_by(main_dataset, id, status, resource) %>%
-    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8)
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8, above_0.5 = mean>0.5)
 
 rank_corr_mean_perc <- rank_corr_mean %>%
     group_by(main_dataset, resource) %>%
     group_split %>%
     purrr::map(function(x){
-        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), 
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x), 
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
     }) %>%
     bind_rows()
 
 jaccard_mean <- results_jaccard %>%
     filter(statparam == "stat") %>%
     group_by(main_dataset, id, status, resource) %>%
-    summarise(mean = mean(value), sd = sd(value), above_0.5 = mean>0.5)
+    summarise(mean = mean(value), sd = sd(value), above_0.5 = mean>0.5, above_0.8 = mean>0.8)
 
 jaccard_corr_mean_perc <- jaccard_mean %>%
     group_by(main_dataset, resource) %>%
     group_split %>%
     purrr::map(function(x){
-        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), 
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x),
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
     }) %>%
     bind_rows()
 
 rand_mean <- results_randindex %>%
     group_by(main_dataset, id, status, resource, k) %>%
-    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8)
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8, above_0.5 = mean>0.5)
 
-rank_corr_mean_perc <- rand_mean %>%
+rand_mean_perc <- rand_mean %>%
     group_by(main_dataset, resource, k) %>%
     group_split %>%
     purrr::map(function(x){
-        tibble(main_dataset = unique(x$main_dataset), k = unique(x$k), resource = unique(x$resource), perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
+        tibble(main_dataset = unique(x$main_dataset), k = unique(x$k), resource = unique(x$resource),
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x),
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
     }) %>%
     bind_rows()
 
