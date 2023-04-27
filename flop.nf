@@ -114,7 +114,7 @@ process decoupler_merger{
 }
 
 process subset_merger{
-    publishDir "$params.parent_folder/flop_benchmark_results/fullmerged/", mode: 'copy'
+    publishDir "$params.parent_folder/flop_results/fullmerged/", mode: 'copy'
 
     input:
     path scripts_dir
@@ -132,7 +132,7 @@ process subset_merger{
 
 //Rank analysis
 process rank_analysis{
-    publishDir "$params.parent_folder/flop_benchmark_results/rank", mode: 'move'
+    publishDir "$params.parent_folder/flop_results/rank", mode: 'move'
 
     input:
     path scripts_dir
@@ -150,7 +150,7 @@ process rank_analysis{
 
 //Rand index analysis
 process rand_index_analysis{
-    publishDir "$params.parent_folder/flop_benchmark_results/rand_index", mode: 'move'
+    publishDir "$params.parent_folder/flop_results/rand_index", mode: 'move'
 
     input:
     path scripts_dir
@@ -171,7 +171,7 @@ process rand_index_analysis{
 
 //Rand index analysis
 process jaccard_analysis{
-    publishDir "$params.parent_folder/flop_benchmark_results/jaccard", mode: 'move'
+    publishDir "$params.parent_folder/flop_results/jaccard", mode: 'move'
 
     input:
     path scripts_dir

@@ -1,4 +1,4 @@
-name: flop_benchmark
+name: flop
 channels:
   - conda-forge
   - bioconda
@@ -22,6 +22,7 @@ dependencies:
   - bioconductor-deseq2
   - bioconductor-vsn
   - bioconductor-org.hs.eg.db
+  - nextflow
   - pip:
     - decoupler
     - omnipath

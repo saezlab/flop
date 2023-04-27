@@ -130,8 +130,8 @@ plotter <- function(results_df, category) {
 
             id_order <- toplot %>%
                 group_by(id_2) %>%
-                summarise(median_score = median(value, na.rm = TRUE)) %>%
-                arrange(., median_score) %>%
+                summarise(mean_score = mean(value, na.rm = TRUE)) %>%
+                arrange(., mean_score) %>%
                 mutate(id_2 = as_factor(id_2))
 
             sorted_data <- toplot %>%
@@ -145,7 +145,7 @@ plotter <- function(results_df, category) {
                 separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
                 separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
                 separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
-                dplyr::select(-median_score) %>%
+                dplyr::select(-mean_score) %>%
                 pivot_longer(cols = -c(id_2)) %>%
                 mutate(
                     category = case_when(
@@ -270,8 +270,8 @@ rank_plotter <- function(results_df, category){
 
         id_order <- toplot %>%
             group_by(id_2) %>%
-            summarise(median_score = median(value, na.rm = TRUE)) %>%
-            arrange(.,median_score) %>%
+            summarise(mean_score = mean(value, na.rm = TRUE)) %>%
+            arrange(.,mean_score) %>%
             mutate(id_2 = as_factor(id_2))
         
         sorted_data <- toplot %>%
@@ -283,7 +283,7 @@ rank_plotter <- function(results_df, category){
             separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
             separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
             separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
-            dplyr::select(-median_score) %>%
+            dplyr::select(-mean_score) %>%
             pivot_longer(cols = -c(id_2)) %>%
             mutate(category = case_when(grepl("filtered", name) ~ "Filtering",
                                         grepl("norm", name) ~ "Normalization",
@@ -399,8 +399,8 @@ randindex_plotter <- function(results_df, category) {
 
             id_order <- toplot %>%
                 group_by(id_2) %>%
-                summarise(median_score = median(value, na.rm = TRUE)) %>%
-                arrange(., median_score) %>%
+                summarise(mean_score = mean(value, na.rm = TRUE)) %>%
+                arrange(., mean_score) %>%
                 mutate(id_2 = as_factor(id_2))
 
             sorted_data <- toplot %>%
@@ -417,7 +417,7 @@ randindex_plotter <- function(results_df, category) {
             id_heatmap_data <- id_order %>%
                 separate(id_2, into = c("is_filtered", "pipeline_a"), sep = " - ", remove = FALSE) %>%
                 separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
-                dplyr::select(-median_score) %>%
+                dplyr::select(-mean_score) %>%
                 pivot_longer(cols = -c(id_2)) %>%
                 mutate(
                     category = case_when(
@@ -559,8 +559,8 @@ summary_plotter <- function(results_df, summary) {
 
         id_order <- toplot %>%
             group_by(id_2) %>%
-            summarise(median_score = median(value, na.rm = TRUE)) %>%
-            arrange(.,median_score) %>%
+            summarise(mean_score = mean(value, na.rm = TRUE)) %>%
+            arrange(.,mean_score) %>%
             mutate(id_2 = as_factor(id_2))
         
         sorted_data <- toplot %>%
@@ -572,7 +572,7 @@ summary_plotter <- function(results_df, summary) {
             separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
             separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
             separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
-            dplyr::select(-median_score) %>%
+            dplyr::select(-mean_score) %>%
             pivot_longer(cols = -c(id_2)) %>%
             mutate(category = case_when(grepl("filtered", name) ~ "Filtering",
                                         grepl("norm", name) ~ "Normalization",
