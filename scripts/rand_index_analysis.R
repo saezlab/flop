@@ -2,17 +2,14 @@ library(tidyverse)
 library(nlme)
 library(fossil)
 
-datafile <- "../results/rand_index/GSE186341__randindex.tsv"
-dataset_id <- "GSE186341"
-path_file <- "./scripts/"
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
 args <- commandArgs(trailingOnly = FALSE)
 path_file <- args[grep("--file=", args)] %>%
   sub("rand_index_analysis.R", "", .) %>%
   sub("--file=", "", .)
 dataset_id <- args[grep("--dataset",args)+1]
 datafile <- args[grep("--file", args) + 1][2]
+k_val <- args[grep("--k_val", args) + 1]
+k_type <- args[grep("--k_type", args) + 1]
 source(paste0(path_file, "rand_index_helper.R"))
 
 merged_data <- read_tsv(datafile)
@@ -22,8 +19,15 @@ resources <- merged_data %>% distinct(resource) %>% pull()
 status <- merged_data %>% distinct(status) %>% pull()
 statparam <- "stat"
 
+
+if (k_type == 'range'){
+  k_values <- seq(from = 1, to = max(length(bio_context), as.numeric(k_val)), by = 1)
+} else if (k_type == 'discrete'){
+  k_values <- max(k_val, length(bio_context)) %>% str_split(., " ") %>% unlist() %>% as.numeric()
+}
+
+
 #K rand index variation
-k_values <- seq(from = 1, to = min(length(bio_context), 32), by = 1)
 rand_results_long <- tibble()
 for (status_i in status) {
   for (resource in resources) {

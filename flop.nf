@@ -2,6 +2,8 @@ params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
 params.perturbation = ""
+params.k_val = 10
+params.k_type = "range"
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -156,6 +158,8 @@ process rand_index_analysis{
     path scripts_dir
     tuple val(datasetID), path (analysis_results)
     each perturbation_dataset
+    val(k_val)
+    val(k_type)
 
     output:
     tuple val(datasetID), path ("*__randindex.tsv")
@@ -165,7 +169,7 @@ process rand_index_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results} --k_val "${k_val}" --k_type ${k_type}
     """
 }
 
@@ -261,7 +265,7 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets)
+    rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
         .set {randindex}
 
     jaccard_analysis(params.scripts_dir, full_results)
