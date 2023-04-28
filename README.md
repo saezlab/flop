@@ -18,6 +18,7 @@ This command will install the necessary dependencies inside an environment.
 
 ```bash
 conda create -f config_env.yaml
+conda activate flop
 ```
 
 Once installed, you are ready to run FLOP!
