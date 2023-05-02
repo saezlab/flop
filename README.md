@@ -17,7 +17,7 @@ To run FLOP, you need to have conda installed in your computer. Please check [th
 This command will install the necessary dependencies inside an environment.
 
 ```bash
-conda create -f ./scripts/flop_env.yaml
+conda env create -f ./scripts/flop_env.yaml
 conda activate flop
 ```
 
