@@ -22,6 +22,7 @@ dependencies:
   - bioconductor-vsn=3.66.0
   - bioconductor-org.hs.eg.db=3.16.0
   - nextflow=22.10.6
+  - graphviz
   - pip:
     - decoupler==1.3.4
     - omnipath==1.0.6
