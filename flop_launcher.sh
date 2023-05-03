@@ -136,7 +136,13 @@ else
         error_func
 fi
 
+if [ $? -eq 0 ] 
+then 
+  echo "Analysis completed successfully! Your results are in $parent_folder/flop_results"
+  exit 0
+else 
+  echo "The execution finished unsuccessfully. Please check the log file for more information." >&2 
+  exit 1
+fi
 
-
-echo "Analysis completed! Your results are in $parent_folder/flop_results"
 
