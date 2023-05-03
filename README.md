@@ -5,6 +5,11 @@
 ## Description
 
 FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
+FLOP is composed of six modules. The first three perform filtering, normalisation, differential expression analysis and functional analysis using different combination of methods or "pipelines". The remaining modules assess the differences in the results of the different pipelines. 
+
+<p align="center" width="100%">
+<img src="https://github.com/saezlab/flop/blob/main/man/images/graphicalabstractFLOP.svg" align="center" width="750">
+</p>
 
 ## Installation
 
