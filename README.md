@@ -1,4 +1,4 @@
-<img src="https://github.com/saezlab/flop/blob/main/logo.png?raw=1" align="right" width="250" class="no-scaled-link" />
+<img src="https://github.com/saezlab/flop/blob/main/man/images/logo.png?raw=1" align="right" width="180" class="no-scaled-link" />
 
 # FLOP: FunctionaL Omics Preprocessing platform 
 
@@ -8,7 +8,7 @@ FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple comb
 FLOP is composed of six modules. The first three perform filtering, normalisation, differential expression analysis and functional analysis using different combination of methods or "pipelines". The remaining modules assess the differences in the results of the different pipelines. 
 
 <p align="center" width="100%">
-<img src="https://github.com/saezlab/flop/blob/main/man/images/graphicalabstractFLOP.svg" align="center" width="750">
+<img src="https://github.com/saezlab/flop/blob/main/man/images/graphicalabstractFLOP.png" align="center" width="750">
 </p>
 
 ## Installation
