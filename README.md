@@ -1,5 +1,7 @@
 # README
 
+FLOP: FunctionaL Omics Preprocessing platform <img src="https://github.com/saezlab/flop/blob/main/inst/figures/logo.svg?raw=1" align="right" width="120" class="no-scaled-link"
+
 # Description
 
 FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
