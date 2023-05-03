@@ -1,6 +1,6 @@
 # README
 
-FLOP: FunctionaL Omics Preprocessing platform <img src="https://github.com/saezlab/flop/blob/main/logo.svg?raw=1" align="right" width="120" class="no-scaled-link"
+FLOP: FunctionaL Omics Preprocessing platform <img src="https://github.com/saezlab/flop/blob/main/logo.png?raw=1" align="right" width="120" class="no-scaled-link"
 
 # Description
 
