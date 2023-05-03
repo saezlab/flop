@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="204.28152mm"
-   height="188.86407mm"
-   viewBox="0 0 204.28152 188.86407"
+   width="208.85402mm"
+   height="197.25137mm"
+   viewBox="0 0 208.85402 197.25137"
    version="1.1"
    id="SVGRoot"
    sodipodi:docname="graphical abstractv2.svg"
@@ -40,6 +40,12 @@
      showguides="false" />
   <defs
      id="defs16663">
+    <rect
+       x="696.97565"
+       y="545.82428"
+       width="13.062461"
+       height="16.794594"
+       id="rect1736" />
     <pattern
        inkscape:collect="always"
        xlink:href="#Strips1_2"
@@ -292,15 +298,30 @@
     </marker>
   </defs>
   <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Capa 2"
+     transform="translate(-0.73746,-9.8714657)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#7f7f7f;stroke-width:0.5;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1323"
+       width="208.35403"
+       height="196.75137"
+       x="0.98746002"
+       y="10.121465"
+       rx="3.752337"
+       ry="3.0000184" />
+  </g>
+  <g
      inkscape:label="Capa 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-6.4133078,-13.042841)">
+     transform="translate(-4.1270522,-8.8491881)">
     <path
        style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#575757;stroke-width:0.499999;stroke-miterlimit:2.3;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker53093)"
        d="M 98.267625,194.73334 H 111.74029"
        id="path53675"
-       inkscape:export-filename="graphical abstract FLOPsvg"
+       inkscape:export-filename="graphical abstractv4.png"
        inkscape:export-xdpi="200"
        inkscape:export-ydpi="200" />
     <g
@@ -439,6 +460,15 @@
            id="tspan5321">analysis</tspan></text>
       <g
          id="g26550">
+        <g
+           id="g27740"
+           transform="translate(-0.105775,69.611662)">
+          <text
+             xml:space="preserve"
+             transform="matrix(0.26458333,0,0,0.26458333,0.105775,-69.611662)"
+             id="text1734"
+             style="font-size:10.6667px;font-family:Arial;-inkscape-font-specification:Arial;text-align:center;white-space:pre;shape-inside:url(#rect1736);display:inline;fill:#239b88;fill-opacity:0.25;fill-rule:evenodd;stroke:#000000;stroke-width:1.05827" />
+        </g>
         <g
            id="g1897">
           <text
