@@ -35,10 +35,10 @@ FLOP has several ways of personalization. These are all possible input parameter
 
 - -d: data folder, containing the subfolders with the datasets to be analysed. Mandatory
 - -e: config set, either 'desktop' or 'cluster’. Mandatory
-- -r: perturbation array, a list of perturbational datasets to be included in the Rand Index analysis. Must be used jointly with -t
-- -t: test mode, runs the pipeline with the test dataset and the desktop config set. Must be used jointly with -r
-- -k: k value, the number of clusters to be used in the Rand Index analysis.
-- -b: k value calculation, either 'range' or 'single'.
+- -r: perturbation array, a list of perturbational datasets to be included in the Rand Index analysis. Must be used jointly with -k and -b
+- -t: test mode, runs the pipeline with the test dataset and the desktop config set. 
+- -k: k value, the number of clusters to be used in the Rand Index analysis. Must be used jointly with -r
+- -b: k value calculation, either 'range' or 'single'. Must be used jointly with -r
 - -h: shows a help message
 
 You can run FLOP with the minimal settings by using this command:
