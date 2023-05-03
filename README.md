@@ -1,8 +1,8 @@
-# README
+<img src="https://github.com/saezlab/flop/blob/main/logo.png?raw=1" align="right" width="250" class="no-scaled-link" />
 
-FLOP: FunctionaL Omics Preprocessing platform <img src="https://github.com/saezlab/flop/blob/main/logo.svg?raw=1" align="right" width="120" class="no-scaled-link"
+# FLOP: FunctionaL Omics Preprocessing platform 
 
-# Description
+## Description
 
 FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
 
@@ -55,7 +55,7 @@ Also, it is possible to run an example version of FLOP with a test dataset via:
 bash flop_launcher.sh -t
 ```
 
-# Input
+## Input
 
 FLOP works with two or three different files. Each different dataset folder should contain at least two of the three files specified below. FLOP support subseting of large datasets (in this case, the results are averaged for the evaluation modules), you can specify a subset using this naming format: {Dataset ID}_{Subset identifier} in the folder name and in the files names. One example data directory could be:
 
@@ -78,19 +78,19 @@ FLOP works with two or three different files. Each different dataset folder shou
 		./CCLE__metadata.tsv
 ```
 
-## Count table
+### Count table
 
 This tab-separated table should contain the gene counts of the dataset. It should have the following name pattern: {Dataset ID}__countdata.tsv 
 
 The data should contain a column named gene_symbol, which contains the gene symbols, and the following columns should be the samples that will be included in the study. Be aware that the sample names should respect R’s naming regulations (see the command make.names). 
 
-## Metadata table
+### Metadata table
 
 This tab-separated table should at least contain the the group to which the samples belong. It should have the following name pattern: {Dataset ID}__metadata.tsv 
 
 This table contains a column named sample_ID, with the names of the samples (again, they should respect R’s naming guidelines) and a column named group, which contains the group every sample belongs to. Other columns can be present, but they will not be considered in the analysis.
 
-## Contrast table
+### Contrast table
 
 This tab-separated table should contain the contrasts that should be calculated in the analysis. It should have the following name pattern: {Dataset ID}__contrast.tsv 
 
@@ -98,19 +98,19 @@ The table should contain two columns, group1 and group2, with the desired contra
 
 This table is optional. If included, FLOP will only calculate the specified contrast. If this table is not included, it will calculate every pairwise comparison between the different groups (be careful with choosing this option when analysing very large datasets, since it will greatly increase the execution time!).
 
-# Output
+## Output
 
 The output consists in three or four different files:
 
-## General results file:
+### General results file:
 
 A long format table that contains the functional scores of all different prior knowledge sources and per pipeline, biological contrast, filtering status, subset (if applicable) and t-value or log fold change.
 
-## Rank correlation results:
+### Rank correlation results:
 
 A long format table that contains the spearman rank correlation scores per comparison, parameter, filtering status, biological context and prior knowledge source. The comparisons are done at the pipeline level, normalisation level and differential expression method level.
 
-## Jaccard index results
+### Jaccard index results
 
 A long format table that contains the Jaccard index scores per pipeline comparison, parameter, filtering status, biological context and prior knowledge source. The number of top and bottom functional categories included vary between the different prior knowledge source:
 
@@ -118,7 +118,7 @@ A long format table that contains the Jaccard index scores per pipeline comparis
 - MSigDB hallmarks: top 5 and bottom 5
 - PROGENy: top 3 and bottom 3
 
-## Rand index analysis
+### Rand index analysis
 
 A long format table that contains the Rand index analysis for a specified number of K values, per pipeline comparison, filtering status, biological context and prior knowledge source.
 
