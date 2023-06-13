@@ -1,13 +1,15 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-params.perturbation = ""
+params.perturbation = "NA"
 params.k_val = 10
 params.k_type = "range"
 params.ngenes_threshold = 0
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
+    memory '2 GB'
+
     publishDir "$params.scripts_dir/scripts/dc_resources", mode: 'copy'
 
     input:
@@ -25,6 +27,8 @@ process get_prsources{
 
 //Performs filtering, normalisation and differential expression analysis
 process contrast_creator{
+    memory '120 GB'
+
     input:
     path scripts_dir
     tuple val(subsetID), path(subset_dir)
@@ -41,6 +45,8 @@ process contrast_creator{
 
 //Performs filtering, normalisation and differential expression analysis
 process diffexp_analysis{
+    memory '8 GB'
+
     input:
     path scripts_dir
     tuple val(subsetID), val(biocontext), path(counts), path(meta)
@@ -59,6 +65,8 @@ process diffexp_analysis{
 
 //Merges the output of differential expression analysis files
 process output_merge_de{
+    memory '64 GB'
+
     publishDir "$params.parent_folder/flop_results/diffexp", mode: 'move'
 
     input:
@@ -79,6 +87,8 @@ process output_merge_de{
 
 //Merges the results from different pipelines
 process downstream_merge_de{
+    memory '2 GB'
+
     input:
     path scripts_dir
     tuple val(subsetID), val(biocontext), val(status), path(diffexpr_files)
@@ -99,6 +109,7 @@ process downstream_merge_de{
 
 //Functional analysis 
 process func_decoupler{
+    memory '4 GB'
     input:
     path scripts_dir
     tuple val(subsetID), val(biocontext), val(status), path(decoupler_files)
@@ -118,6 +129,7 @@ process func_decoupler{
 
 //Merges the results from DecoupleR
 process decoupler_merger{
+    memory '4 GB'
     input:
     path scripts_dir
     tuple val(subsetID), val(status), path (decoupler_results)
@@ -135,6 +147,7 @@ process decoupler_merger{
 }
 
 process subset_merger{
+    memory '25 GB'
     publishDir "$params.parent_folder/flop_results/funcomics/fullmerged/", mode: 'copy'
 
     input:
@@ -153,6 +166,7 @@ process subset_merger{
 
 //Rank analysis
 process rank_analysis{
+    memory '25 GB'
     publishDir "$params.parent_folder/flop_results/funcomics/rank", mode: 'move'
 
     input:
@@ -171,6 +185,7 @@ process rank_analysis{
 
 //Rand index analysis
 process rand_index_analysis{
+    memory '25 GB'
     publishDir "$params.parent_folder/flop_results/funcomics/rand_index", mode: 'move'
 
     input:
@@ -194,6 +209,7 @@ process rand_index_analysis{
 
 //Rand index analysis
 process jaccard_analysis{
+    memory '25 GB'
     publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
 
     input:
@@ -249,7 +265,8 @@ workflow {
             it.name.toString().split("__")[0],
             it.name.toString().split("__")[1],
             it)}
-        .groupTuple(by:[0,1])
+        .groupTuple(by:[0,1], size: 2)
+        // .view()
         .map{it -> tuple it[0], it[1], it[2][0], it[2][1]}
         .set {contrasts}
 
@@ -259,7 +276,7 @@ workflow {
         .set {diffexpr}
     
     diffexpr.downstream
-        .groupTuple(by:[0,1,2])
+        .groupTuple(by:[0,1,2], size: 6)
         .set {diffexpr_files}
     
     diffexpr.output
@@ -287,15 +304,12 @@ workflow {
 
     decoupler_merger(params.scripts_dir, decoupler)
         .map{it -> tuple it[0].split("_")[0], it[1]}
-        .view{"step1: $it"}
         .groupTuple(by:0)
-        .view{"step2: $it"}
         .map{it -> tuple it[0], it[1]}
-        .view{"step3: $it"}
         .set {subset_results}
 
     subset_merger(params.scripts_dir, subset_results)
-        .view{"subset: $it"}
+        // .view{"subset: $it"}
         .set {full_results}
 
     rank_analysis(params.scripts_dir, full_results)

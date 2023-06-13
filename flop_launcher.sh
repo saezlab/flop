@@ -131,15 +131,29 @@ fi
 
 
 # Run flop_benchmark
-if [ $config_set = "desktop" ]; then
-        echo "Running FLOP on a desktop computer..."
-        nextflow -C flop.config run flop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
-elif [ $config_set = "cluster" ]; then
-        echo "Running FLOP on a slurm-controlled cluster..."
-        nextflow -C flop.config run flop.nf -profile cluster -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
-else
-        echo "Valid options: desktop, cluster"
-        error_func
+
+if [ -z $perturbation_array ]; then
+  if [ $config_set = "desktop" ]; then
+          echo "Running FLOP on a desktop computer... No cluster"
+          nextflow -C flop.config run flop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh"
+  elif [ $config_set = "cluster" ]; then
+          echo "Running FLOP on a slurm-controlled cluster... No cluster"
+          nextflow -C flop.config run flop.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh"
+  else
+          echo "Valid options: desktop, cluster"
+          error_func
+  fi
+else 
+  if [ $config_set = "desktop" ]; then
+          echo "Running FLOP on a desktop computer..."
+          nextflow -C flop.config run flop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
+  elif [ $config_set = "cluster" ]; then
+          echo "Running FLOP on a slurm-controlled cluster..."
+          nextflow -C flop.config run flop.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
+  else
+          echo "Valid options: desktop, cluster"
+          error_func
+  fi
 fi
 
 if [ $? -eq 0 ] 
