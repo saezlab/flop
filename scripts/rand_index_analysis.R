@@ -8,6 +8,8 @@ path_file <- args[grep("--file=", args)] %>%
   sub("--file=", "", .)
 dataset_id <- args[grep("--dataset",args)+1]
 datafile <- args[grep("--file", args) + 1][2]
+k_val <- args[grep("--k_val", args) + 1]
+k_type <- args[grep("--k_type", args) + 1]
 source(paste0(path_file, "rand_index_helper.R"))
 
 merged_data <- read_tsv(datafile)
@@ -17,8 +19,15 @@ resources <- merged_data %>% distinct(resource) %>% pull()
 status <- merged_data %>% distinct(status) %>% pull()
 statparam <- "stat"
 
+
+if (k_type == 'range'){
+  k_values <- seq(from = 1, to = max(length(bio_context), as.numeric(k_val)), by = 1)
+} else if (k_type == 'discrete'){
+  k_values <- max(k_val, length(bio_context)) %>% str_split(., " ") %>% unlist() %>% as.numeric()
+}
+
+
 #K rand index variation
-k_values <- seq(from = 1, to = min(length(bio_context), 32), by = 1)
 rand_results_long <- tibble()
 for (status_i in status) {
   for (resource in resources) {
@@ -33,7 +42,7 @@ for (status_i in status) {
       cluster_results <- clustering_k(merged_data, i, resource, status_i)
       for (pipeline1 in pipelines) {
         for (pipeline2 in pipelines) {
-          rand_result <- rand.index(
+          rand_result <- adj.rand.index(
             cluster_results[[status_i]][[resource]][[pipeline1]]$segments$clust,
             cluster_results[[status_i]][[resource]][[pipeline2]]$segments$clust
           )
@@ -66,4 +75,9 @@ for (status_i in status) {
   }
 }
 
+summary_sd <- rand_results_long %>%
+  group_by(k, resource) %>%
+  summarise(main_dataset = dataset_id, sd = sd(scores))
+
 write_tsv(rand_results_long, file = paste0(dataset_id, "__randindex.tsv"))
+write_tsv(summary_sd, file = paste0(dataset_id, "__summary__randindex.tsv"))

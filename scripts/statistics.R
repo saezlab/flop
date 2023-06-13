@@ -1,6 +1,8 @@
 library(tidyverse)
 library(stats)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# Data import
 files_info <- tibble()
 rank_info <- list.files(
     path = "../results/rank/",
@@ -56,7 +58,7 @@ jaccard_info <- list.files(
     ) %>%
     dplyr::rename(path = value)
 
-files_info <- rbind(rank_info, randindex_info, jaccard_info)
+files_info <- rbind(rank_info, randindex_info, jaccard_info) %>% mutate(dataset =  replace(dataset, dataset == "GTEx", "GTex"))
 datasets <- files_info %>%
     distinct(dataset) %>%
     pull()
@@ -88,11 +90,18 @@ randindex_reader <- function(path) {
 }
 
 results_randindex <- files_info %>%
-    filter(analysis == "randindex", dataset == "GSE186341") %>%
+    filter(analysis == "randindex", type == "randindex.tsv", dataset == "GSE186341") %>%
     pull(path) %>%
-    lapply(., randindex_reader) %>%
+    lapply(., read_tsv) %>%
     bind_rows() %>%
     filter(k == "11" | k == "32") %>%
+    dplyr::rename(value = scores)
+
+results_randindex_bio <- files_info %>%
+    filter(analysis == "randindex", type == "bio", dataset == "GSE186341") %>%
+    pull(path) %>%
+    lapply(., read_tsv) %>%
+    bind_rows() %>%
     dplyr::rename(value = scores)
 
 # Rank statistical analysis
@@ -100,30 +109,125 @@ results_randindex <- files_info %>%
 wilcox_rank_results <- list()
 for (dataset in datasets) {
     wilcox_rank_data <- results_rank %>%
-        filter(main_dataset == !!dataset)
-    wilcox_rank_results[[dataset]] <- wilcox.test(value ~ status, data = wilcox_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+        filter(main_dataset == !!dataset, statparam == "stat")
+    wilcox_rank_results[[dataset]] <- wilcox.test(value ~ status, data = wilcox_rank_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
 }
 
+wilcox_jaccard_results <- list()
+for (dataset in datasets) {
+    wilcox_jaccard_data <- results_jaccard %>%
+        filter(main_dataset == !!dataset, statparam == "stat")
+    wilcox_jaccard_results[[dataset]] <- wilcox.test(value ~ status, data = wilcox_jaccard_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+}
+
+results_jaccard %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, status) %>%
+    summarise(mean = mean(value), sd = sd(value), rel_sd = sd/mean)
+
+# relative stdev
+results_rank %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, status) %>%
+    summarise(mean = mean(value), sd = sd(value), rel_sd = sd/mean)
+
+results_randindex %>%
+    group_by(status, resource) %>%
+    summarise(mean = mean(value), sd = sd(value), rel_sd = sd/mean) %>%
+    aggregate(mean ~ resource, FUN = diff)	
+
+
+# top similar
+results_jaccard %>%
+    mutate(id2 = paste(id, status, sep = "-")) %>%
+    filter(statparam == "stat", resource=='progeny') %>%
+    group_by(main_dataset) %>%
+    group_split %>%
+    purrr::map(function(x){
+        x %>% 
+            group_by(id2) %>%
+            summarise(dataset = unique(.$main_dataset), mean = mean(value), median = median(value), sd = sd(value), rel_sd = sd/mean) %>%
+            arrange(desc(median))
+
+    })
+
+results_jaccard %>%
+    mutate(id2 = paste(id, status, sep = "-")) %>%
+    filter(statparam == "stat") %>%
+    ungroup() %>%
+    group_by(resource) %>%
+        summarise(mean = mean(value), median = median(value), sd = sd(value), rel_sd = sd/mean)
+
+# rand statistical analysis
 wilcox_rand_results <- list()
 resources <- results_randindex %>%
     distinct(resource) %>%
     pull()
+k_vals <- c("22", "32", "2")
+
 for (resource in resources) {
-    wilcox_rand_data <- results_randindex %>%
-        filter(resource == !!resource)
-    wilcox_rand_results[["k issue"]][[resource]] <- wilcox.test(value ~ k, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
-    wilcox_rand_results[["filtering"]][[resource]] <- wilcox.test(value ~ status, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+    for (k in k_vals) {
+        wilcox_rand_data <- results_randindex %>%
+            filter(resource == !!resource, k == !!k)
+        wilcox_rand_results[[resource]][[k]] <- wilcox.test(value ~ status, data = wilcox_rand_data, alternative = "greater", paired = TRUE, p.adjust.methods = "BH")
+    }
 }
 
+rank_corr_mean <- results_rank %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, id, status, resource) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8, above_0.5 = mean>0.5)
 
-results_rank %>%
-filter(main_dataset == !!dataset) %>%
-group_by(status)%>%
-summarise(mean = mean(value), sd = sd(value)
-)
+rank_corr_mean_perc <- rank_corr_mean %>%
+    group_by(main_dataset, resource) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), 
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x), 
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+jaccard_mean <- results_jaccard %>%
+    filter(statparam == "stat") %>%
+    group_by(main_dataset, id, status, resource) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.5 = mean>0.5, above_0.8 = mean>0.8)
 
+jaccard_corr_mean_perc <- jaccard_mean %>%
+    group_by(main_dataset, resource) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), resource = unique(x$resource), 
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x),
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+rand_mean <- results_randindex %>%
+    group_by(main_dataset, id, status, resource, k) %>%
+    summarise(mean = mean(value), sd = sd(value), above_0.8 = mean>0.8, above_0.5 = mean>0.5)
 
+rand_mean_perc <- rand_mean %>%
+    group_by(main_dataset, resource, k) %>%
+    group_split %>%
+    purrr::map(function(x){
+        tibble(main_dataset = unique(x$main_dataset), k = unique(x$k), resource = unique(x$resource),
+        perc_0.8 = nrow(subset(x, above_0.8 == TRUE))/nrow(x),
+        perc_0.5 = nrow(subset(x, above_0.5 == TRUE))/nrow(x))
+    }) %>%
+    bind_rows()
 
+# Barplots:
+# Rank
+rank_corr_mean_perc %>%
+    ggplot(aes(x = main_dataset, y = perc_0.8, fill = resource)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    cowplot::theme_cowplot() +
+    theme()
 
+results_randindex %>%
+    filter(k == "22"| k =="32" | k =="2") %>%
+    group_by(resource, k, status) %>%
+    summarise(min = min(value), max = max(value), mean = mean(value), sd = sd(value)) %>%
+    aggregate(mean ~ resource + k, FUN = diff)	
+22 2 32

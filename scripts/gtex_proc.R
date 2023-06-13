@@ -6,9 +6,9 @@ ID_gen <- function(n = 10) {
   paste0(a, sprintf("%04d", sample(9999, n, TRUE)), sample(LETTERS, n, TRUE))
 }
 
+set.seed(1)
 n=5
 random_ident <- ID_gen(n)
-set.seed(1)
 
 countfile <- list.files(path = "./unproc_data/GTex/", pattern = '*.gct', full.names = T)
 metafiles <- list.files(path = "./unproc_data/GTex/", pattern = '*SampleAttributesDS.txt', full.names = T)
@@ -52,8 +52,8 @@ for (i in random_ident){
   sampled_data <- data %>% 
     dplyr::select(gene_symbol, sampled_meta$sample_ID)
   
-  write_tsv(sampled_meta, paste("./data/GTex_", i, "/metadata.tsv", sep=''))
-  write_tsv(sampled_data, paste("./data/GTex_", i, "/countdata.tsv", sep=''))
+  write_tsv(sampled_meta, paste0("./data/GTex_", i, "/GTex_", i, "__metadata.tsv"))
+  write_tsv(sampled_data, paste0("./data/GTex_", i, "/GTex_", i, "__countdata.tsv"))
   
 }
   

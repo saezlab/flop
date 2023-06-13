@@ -29,15 +29,12 @@ clustering_k <- function(merged_data, k, resource, status_i) {
   return(cluster_results)
 }
 
-# insert roxygen skeleton:
-
 #' @title Hierarchical clustering calculator
 #' @description Creates k number of clusters and adds information to the hierarchical clustering object
 #' @param hc A hierarchical clustering object
 #' @param k number of clusters
 #' @importFrom ggdendro dendro_data
 #' @importFrom stats cutree
-#' @importFrom graphics cutree
 #' @return A list containing the hierarchical clustering object with additional information
 #' @export
 #' @examples

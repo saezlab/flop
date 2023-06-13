@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name CCLE_proc
+#SBATCH --job-name PANACEA_proc
 #SBATCH --nodes 1
 #SBATCH --ntasks 16
 #SBATCH --mem 128GB
@@ -11,4 +11,4 @@ source $HOME/.bashrc
 
 conda activate flop
 
-Rscript /net/data.isilon/ag-saez/bq_vpaton/flop/scripts/ccle_proc.R
+Rscript /net/data.isilon/ag-saez/bq_vpaton/flop/scripts/panacea_proc.R

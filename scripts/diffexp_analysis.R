@@ -1,4 +1,5 @@
 library(tidyverse)
+library(qs)
 #library(rstudioapi)
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -16,7 +17,7 @@ path_file <- args[grep("--file=", args)] %>%
 counts_file <- args[grep("--counts", args) + 1]
 meta_file <- args[grep("--meta", args) + 1]
 status <- args[grep("--status", args) + 1]
-dataset_id <- args[grep("--dataset", args) + 1]
+subset_id <- args[grep("--dataset", args) + 1]
 biocontext <- args[grep("--bio", args) + 1]
 pipeline <- args[grep("--pipeline", args) + 1] %>%
     strsplit(., split = " ") %>%
@@ -26,8 +27,8 @@ source(paste0(path_file, "normalization_helper.R"))
 source(paste0(path_file, "diffexp_helper.R"))
 source(paste0(path_file, "filtering_helper.R"))
 
-counts <- readRDS(counts_file)
-metadata <- readRDS(meta_file) %>% mutate(group = factor(group))
+counts <- qread(counts_file)
+metadata <- qread(meta_file) %>% mutate(group = factor(group))
 
 if (status == 'filtered') {
     filt_func <- get('filtering')
@@ -52,7 +53,7 @@ if (length(pipeline) == 1) {
     print(pipeline)
 }
 
-output_filename <- paste(dataset_id, biocontext, pipeline[1], pipeline[2], "de", sep = "__") %>%
-  paste(., ".rds", sep = "")
+output_filename <- paste(subset_id, biocontext, status, pipeline[1], pipeline[2], "de", sep = "__") %>%
+  paste(., ".qs", sep = "")
 
-saveRDS(results, output_filename)
+qsave(results, output_filename)

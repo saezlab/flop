@@ -82,4 +82,4 @@ diffexp_cor_results <- corr_analysis(merged_data, "diffexp")
 write_tsv(diffexp_cor_results, file = paste0(dataset_id, "__diffexp__rank.tsv"))
 
 
-
+panacea_datafile = datafile %>% sub("CCLE", "GSE186341", .)

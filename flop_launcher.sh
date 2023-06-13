@@ -1,119 +1,155 @@
 #!/bin/bash
-source "$HOME/.bashrc"
-# Change working directory to the directory where the script is located
-cd -P -- "$(dirname -- "$0")"
-echo $PWD
-
-
-# Description: Install Nextflow
-# Check if the directory Nextflow is already installed; if it is, skip step, if not, install it
-if [ -f "nextflow" ]; then
-        echo "Nextflow already installed, skipping installation"
-else
-        echo "Nextflow not installed, installing it"
-        curl -s https://get.nextflow.io | bash
-        chmod +x nextflow
-        echo "Nextflow installed successfully"
-fi
-
-
-# Description: Install conda environment
-conda init bash
-# source $CONDA_PREFIX/etc/profile.d/conda.s./Data
-# Check if conda env named flop_benchmark exists; if it does, skip step, if not, create it
-if [ -d "$CONDA_PREFIX/envs/flop_benchmark" ]; then
-        echo "Conda environment flop_benchmark already exists, skipping creation"
-else
-        echo "Conda environment flop_benchmark does not exist, creating it"
-        conda env create -f scripts/config_env.yaml
-        echo "Dependencies installed successfully" 
-fi
-conda activate flop_benchmark
-
-# Description: Run flop_benchmark
-echo '
+banner=$"
 ##########################################################################
  Welcome to
- _______ _______ _______ _______ _______ _______ _______ _______
-|  _______ ___     _______ _______                              |
-| |   _   |   |   |   _   |   _   |                             |
-| |.  1___|.  |   |.  |   |.  1   |                             |
-| |.  __) |.  |___|.  |   |.  ____|                             |
-| |:  |   |:  1   |:  1   |:  |                                 |
-| |::.|   |::.. . |::.. . |::.|                                 |
-| `---'\''   `-------`-------`---'\''                                 |
-|  __                     __                        __          |
-| |  |--.-----.-----.----|  |--.--------.---.-.----|  |--.      |
-| |  _  |  -__|     |  __|     |        |  _  |   _|    <       |
-| |_____|_____|__|__|____|__|__|__|__|__|___._|__| |__|__|      |
-|_______ _______ _______ _______ _______ _______ _______ _______|
+.------..------..------..------.
+|F.--. ||L.--. ||O.--. ||P.--. |
+| :(): || :/\: || :/\: || :/\: |
+| ()() || (__) || :\/: || (__) |
+| '--'F|| '--'L|| '--'O|| '--'P|
+\`------'\`------'\`------'\`------'
 
- The FunctionaL Omics Preprocessing benchmarking platform is
- a workflow meant to benchmark the impact of different 
+ The FunctionaL Omics Preprocessing platform is
+ a workflow meant to evaluate the impact of different 
  normalization and differential expression tools on the 
  resulting functional space, in the context of bulk RNA-seq data.
  
  ##########################################################################
- '
+ "
 
-read -p "Please specify your folder containing the data to be analysed: " -e data_folder
+# Change working directory to the directory where the script is located
+cd -P -- "$(dirname -- "$0")"
+
+help_txt="
+Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
+
+Argument list:
+        -d: data folder, containing the subfolders with the datasets to be analyzed
+        -e: config set, either 'desktop' or 'cluster'
+        -r: perturbation array, a list of perturbational datasets to be included in the Rand Index analysis.
+        -k: k value, the number of clusters to be used in the Rand Index analysis.
+        -b: k value calculation, either 'range' or 'single'.
+        -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
+        -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis.
+        -h: shows this help message
+
+For more information, please refer to the README file.
+"
+
+error_func () {
+  echo "script usage: flop_launcher.sh [-d data_folder] [-e] [-a somevalue]" >&2
+  echo "Try 'flop_launcher.sh -h' for more information." >&2
+  exit 1
+}
+
+testdata_downloader () {
+  curl -C - -O https://filedn.eu/ld7S7VEWtgOf5uN0V7fbp84/test_data.zip
+  unzip -n test_data.zip -d ./test_data
+}
+
+while getopts 'd:e:r:k:b:f:ht' OPTION; do
+  case "$OPTION" in
+    d)
+      data_folder="$OPTARG"
+      ;;
+    e)
+      config_set="$OPTARG"
+      ;;
+    r)
+      perturbation_array="$OPTARG"
+      ;;
+    h)
+      echo "$help_txt"
+      exit
+      ;;
+    t)
+      testdata_downloader
+      data_folder="./test_data/"
+      perturbation_array="test"
+      k_val=3
+      k_type="range"
+      n_thresh=50
+      echo "##TEST MODE##"
+      ;;
+    k)
+      k_val="$OPTARG"
+      ;;
+    b)
+      k_type="$OPTARG"
+      ;;
+    f)
+      n_thresh="$OPTARG"
+      ;;
+    ?)
+      error_func
+      ;;
+  esac
+done
+if [ $OPTIND -eq 1 ]; then error_func; fi
+if [ -z $k_val ] && [ ! -z $k_type ]; then error_func; fi
+if [ ! -z $k_val ] && [ -z $k_type ]; then error_func; fi
+if [ -z $data_folder ] || [ -z $config_set ]; then error_func; fi
+if [ -z $n_thresh ]; then n_thresh=0; fi
+shift "$(($OPTIND -1))"
+
+suffix="/" # add a slash to the end of the data folder if it is not already there
+if [[ $data_folder == *$suffix ]]; then
+  data_folder+=""
+else
+  data_folder+="/"
+fi
 
 parent_folder=$(dirname $data_folder)
-
-# num_dirs=$(ls -l "$data_folder" | grep -c ^d)
-num_dirs=$(find "$data_folder" -mindepth 1 -maxdepth 1 -not -empty -type d -printf '%f\n' | wc -l)
-echo "Number of subsets found: $num_dirs"
-
-name_datasets=$(find "$data_folder" -mindepth 1 -maxdepth 1 -not -empty -type d -printf '%f\n' | cut -d"_" -f1 | sort | uniq | tr '\n' ' ')
-echo "Datasets found: $name_datasets"
-
-echo "
-Current options to run flop_benchmark are:
-    1 - Run flop_benchmark on a desktop computer
-    2 - Run flop_benchmark on a slurm-controlled cluster
-    
-Please select your option: "
-read option
-
-datasets_array=($name_datasets)
-echo "Please select which of the following datasets will be included in the Rand Index analysis.
-Leave blank if none:"
-for index in ${!datasets_array[@]}; do
-    echo $((index)) - "${datasets_array[index]}"
-done
-read perturbation
-
-for index in $perturbation; do
-    perturbation_array+=${datasets_array[$index]}" "
-done
+num_dirs=$(ls -ld "$data_folder"* | awk '{print $NF}' | rev | cut -d "/" -f1 | rev | cut -d "/" -f3 | wc -l)
+name_datasets=$(ls -ld "$data_folder"* | awk '{print $NF}' | rev | cut -d "/" -f1 | rev | sort | uniq | tr '\n' ' ')
 
 # Ask if config is correct, if not, exit
+
+
+echo "${banner}"
 echo "
-You have selected option $option.
-Data folder is $data_folder.
+##SETTINGS##
+Running option: $config_set
+Data folder: $data_folder
 Number of subsets found: $num_dirs
 Datasets found: $name_datasets
 Perturbational datasets included in the Rand Index analysis: $perturbation_array
+Minimum number of significant genes per contrast: $n_thresh"
 
-Proceed? (y/n): "
-read answer
-
-if [ $answer != "y" ]; then
-        echo "Aborting, exiting"
-        exit
+if [ ! -z $k_val ] && [ ! -z $k_type ]; then
+  echo "k value(s): $k_val"
+  echo "k value(s) calculation: $k_type"
 fi
+
+# echo "Proceed? (y/n): "
+# read answer
+
+# if [ $answer != "y" ]; then
+#         echo "Aborting..."
+#         exit
+# fi
+
 
 # Run flop_benchmark
-if [ $option -eq 1 ]; then
-        echo "Running flop_benchmark on a desktop computer"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
-elif [ $option -eq 2 ]; then
-        echo "Running flop_benchmark on a slurm-controlled cluster"
-        ./nextflow -C bq_slurm.config run flop_benchmark.nf -profile cluster -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array"
+if [ $config_set = "desktop" ]; then
+        echo "Running FLOP on a desktop computer..."
+        nextflow -C flop.config run flop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
+elif [ $config_set = "cluster" ]; then
+        echo "Running FLOP on a slurm-controlled cluster..."
+        nextflow -C flop.config run flop.nf -profile cluster -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --perturbation "$perturbation_array" --k_val "$k_val" --k_type $k_type --ngenes_threshold "$n_thresh"
 else
-        echo "Invalid option, aborting"
-        exit
+        echo "Valid options: desktop, cluster"
+        error_func
 fi
 
-echo "Analysis completed! Your results are in $parent_folder/flop_benchmark_results"
+if [ $? -eq 0 ] 
+then 
+  echo "Analysis completed successfully! Your results are in $parent_folder/flop_results"
+  exit 0
+else 
+  echo "The execution finished unsuccessfully. Please check the log file for more information." >&2 
+  exit 1
+fi
+
+
 
