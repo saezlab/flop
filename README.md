@@ -1,27 +1,58 @@
-# Add instructions to readme
-
-Created time: March 16, 2023 5:52 PM
-Status: In progress
+# README
 
 # Description
 
-FLOP benchmarking is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
+FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
 
 ## Installation
 
 To install FLOP, you first will need to download the files from our GitHub repository:
 
 ```bash
-git clone https://github.com/saezlab/flop_benchmark
+git clone https://github.com/saezlab/flop
 ```
 
-Once downloaded, you can just execute the launcher command and it will install the necessary dependencies:
+To run FLOP, you need to have conda installed in your computer. Please check [this link](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to learn how to install conda.
+
+This command will install the necessary dependencies inside an environment.
 
 ```bash
-bash flop_launcher.sh
+conda env create -f config_env.yaml
+conda activate flop
 ```
 
-You are set up! The launcher will guide you through the rest of the analysis. You can reuse this command every time you launch a new analysis. 
+Once installed, you are ready to run FLOP!
+
+## Run
+
+Mode of usage:
+
+```bash
+flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
+```
+
+FLOP has several ways of personalization. These are all possible input parameters:
+
+- -d: data folder, containing the subfolders with the datasets to be analyzed
+- -e: config set, either 'desktop' or 'cluster'
+- -r: perturbation array, a list of perturbational datasets to be included in the Rand Index analysis.
+- -k: k value, the number of clusters to be used in the Rand Index analysis.
+- -b: k value calculation, either 'range' or 'single'.
+- -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
+- -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis.
+- -h: shows this help message
+
+You can run FLOP with the minimal settings by using this command:
+
+```bash
+flop_launcher.sh [-d data_folder] [-e config_set]
+```
+
+Also, it is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA dataset via:
+
+```bash
+flop_launcher.sh -t [-e config_set]
+```
 
 # Input
 
@@ -68,7 +99,7 @@ This table is optional. If included, FLOP will only calculate the specified cont
 
 # Output
 
-The output consists in three or different files:
+The output consists in three or four different files:
 
 ## General results file:
 
@@ -88,6 +119,6 @@ A long format table that contains the Jaccard index scores per pipeline comparis
 
 ## Rand index analysis
 
-A long format table that contains the Rand index analysis for 11 and 32 K’s, per pipeline comparison, filtering status, biological context and prior knowledge source.
+A long format table that contains the Rand index analysis for a specified number of K values, per pipeline comparison, filtering status, biological context and prior knowledge source.
 
-Since this analysis is only informative when there are biological factors (such a specific number of cell lines, treatments, etc.) that makes the clustering of the samples important for a study, we implemented this analysis as optimal inside the FLOP architecture. You can select the datasets that will be included in this analysis during the initial configuration.
+Since this analysis is only informative when there might be a ground truth (such a specific number of cell lines, treatments, etc.) that makes the clustering of the samples important for a study, we implemented this analysis as optional inside the FLOP architecture. You can select the datasets, the K value, and if this value is unique or the maximum of a range, that will be included in this analysis during the initial configuration.
