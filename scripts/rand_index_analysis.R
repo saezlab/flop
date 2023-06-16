@@ -22,6 +22,7 @@ statparam <- "stat"
 
 if (k_type == 'range'){
   k_values <- seq(from = 1, to = max(length(bio_context), as.numeric(k_val)), by = 1)
+  print(k_values)
 } else if (k_type == 'discrete'){
   k_values <- max(k_val, length(bio_context)) %>% str_split(., " ") %>% unlist() %>% as.numeric()
 }
@@ -32,6 +33,7 @@ rand_results_long <- tibble()
 for (status_i in status) {
   for (resource in resources) {
     for (i in k_values) {
+      print(paste0("k = ", i, " resource = ", resource, " status = ", status_i))
       rand_results <- matrix(
         nrow = length(pipelines),
         ncol = length(pipelines),
