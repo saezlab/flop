@@ -65,7 +65,7 @@ for (status_i in status) {
         mutate(
           id = paste(
             sort(c(pipeline1, pipeline2))[1],
-            sort(c(pipeline1, pipeline2))[2], sep = "-"
+            sort(c(pipeline1, pipeline2))[2], sep = " - "
           ),
           resource = !!resource,
           status = !!status_i

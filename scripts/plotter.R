@@ -6,7 +6,7 @@ library(grid)
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 files_info <- tibble()
 rank_info <- list.files(
-    path = "./flop_results/filtered/rank/",
+    path = "./flop_results/funcomics/rank/",
     pattern = "*__rank.tsv",
     full.names = TRUE
 ) %>%
@@ -18,13 +18,13 @@ rank_info <- list.files(
     ) %>%
     select(-ext) %>%
     mutate(
-        dataset = sub("./flop_results/filtered/rank/", "", dataset),
+        dataset = sub("./flop_results/funcomics/rank/", "", dataset),
         analysis = "rank"
     ) %>%
     dplyr::rename(path = value)
 
 randindex_info <- list.files(
-    path = "./flop_results/filtered/rand_index/",
+    path = "./flop_results/funcomics/rand_index/",
     pattern = "*__randindex.tsv",
     full.names = TRUE
     ) %>%
@@ -36,13 +36,13 @@ randindex_info <- list.files(
     ) %>%
     select(-ext) %>%
     mutate(
-        dataset = sub("./flop_results/rand_index/", "", dataset),
+        dataset = sub("./flop_results/funcomics/rand_index/", "", dataset),
         analysis = "randindex"
     ) %>%
     dplyr::rename(path = value)
 
 jaccard_info <- list.files(
-    path = "./flop_results/filtered/jaccard/",
+    path = "./flop_results/funcomics/jaccard/",
     pattern = "*__jaccard.tsv",
     full.names = TRUE
 ) %>%
@@ -54,7 +54,7 @@ jaccard_info <- list.files(
     ) %>%
     select(-ext) %>%
     mutate(
-        dataset = sub("./flop_results/filtered/jaccard/", "", dataset),
+        dataset = sub("./flop_results/funcomics/jaccard/", "", dataset),
         analysis = "jaccard"
     ) %>%
     dplyr::rename(path = value)
@@ -97,20 +97,26 @@ results_rank_diffexp <- files_info %>%
 
 results_jaccard <- files_info %>%
     filter(analysis == "jaccard") %>%
-    pull(path) %>%
+    pull(path) %>% 
     lapply(., read_tsv) %>%
     bind_rows() %>%
     filter(statparam == "stat") %>%
     mutate(status = case_when(
             grepl("\\bfiltered\\b", status) ~ "Filtered",
             grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
-        ))
+        )) %>%
+    select(-feature_1, -name) %>%
+    separate(id, into = c('feature_1', 'name'), sep = " - ", remove = FALSE)
 
 results_randindex <- files_info %>%
     filter(analysis == "randindex", dataset == "GSE186341", type == "randindex.tsv") %>%
     pull(path) %>%
     lapply(., read_tsv) %>%
     bind_rows() %>%
+    mutate(status = case_when(
+            grepl("\\bfiltered\\b", status) ~ "Filtered",
+            grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+        )) %>%
     dplyr::rename(value = scores)
 
 results_randindex_bio <- files_info %>%
@@ -118,7 +124,7 @@ results_randindex_bio <- files_info %>%
     pull(path) %>%
     lapply(., read_tsv) %>%
     bind_rows() %>%
-    filter(k == "11" | k == "32") %>%
+    filter(k == "10" | k == "22") %>%
     dplyr::rename(value = scores)
 
 results_randindex_summary <- files_info %>%
@@ -130,9 +136,9 @@ results_randindex_summary <- files_info %>%
 plotter <- function(results_df, category) {
     if(grepl("Rand", category)){
         datasets <- "GSE186341"
-        results_df <- results_df %>% filter(k == 11 | k == 32)
+        results_df <- results_df %>% filter(k == 10 | k == 22)
     } else {
-        datasets <- c("GSE186341")
+        datasets <- results_df %>% distinct(main_dataset) %>% pull()
     }
     resources <- results_df %>%
         distinct(resource) %>%
@@ -159,6 +165,8 @@ plotter <- function(results_df, category) {
 
             id_heatmap_data <- id_order %>%
                 separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
+                # separate(id_2, into = c("is_filtered", "pipelines"), sep = " - ", remove = FALSE) %>%
+                # separate(pipelines, into = c("pipeline_a", "pipeline_b"), sep = "-", remove = TRUE) %>%
                 separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
                 separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
                 dplyr::select(-mean_score) %>%
@@ -254,7 +262,7 @@ plotter <- function(results_df, category) {
         merged_filename <- paste0(dataset, "__", category)
 
         save_plot(
-            filename = paste0("./flop_results/filtered/plots/", merged_filename, ".png"),
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".png"),
             plot = merged_plot,
             device = "png",
             dpi = 300,
@@ -263,7 +271,7 @@ plotter <- function(results_df, category) {
         )
 
         save_plot(
-            filename = paste0("./flop_results/filtered/plots/", merged_filename, ".svg"),
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".svg"),
             plot = merged_plot,
             device = "svg",
             dpi = 300,
@@ -405,7 +413,7 @@ plotter(results_jaccard, "Jaccard Index")
 
 randindex_plotter <- function(results_df, category) {
     datasets <- "GSE186341"
-    results_df <- results_df %>% dplyr::filter(k == 11 | k == 32)
+    results_df <- results_df %>% dplyr::filter(k == 10 | k == 22)
     resources <- results_df %>%
         distinct(resource) %>%
         pull()
@@ -428,8 +436,8 @@ randindex_plotter <- function(results_df, category) {
                     id_2 = as_factor(id_2),
                     category = !!category,
                     ground_truth = case_when(
-                        grepl("cell_line", ground_truth) ~ "k=11 vs Cell line",
-                        grepl("treatment", ground_truth) ~ "k=32 vs Treatment"
+                        grepl("cell_line", ground_truth) ~ "k=10 vs Cell line",
+                        grepl("treatment", ground_truth) ~ "k=22 vs Treatment"
                     )
                 )
 
@@ -517,7 +525,7 @@ randindex_plotter <- function(results_df, category) {
         merged_filename <- paste0(dataset, "__bio__", category)
 
         save_plot(
-            filename = paste0("./flop_results/plots/", merged_filename, ".png"),
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".png"),
             plot = merged_plot,
             device = "png",
             dpi = 300,
@@ -526,7 +534,7 @@ randindex_plotter <- function(results_df, category) {
         )
 
         save_plot(
-            filename = paste0("./flop_results/plots/", merged_filename, ".svg"),
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".svg"),
             plot = merged_plot,
             device = "svg",
             dpi = 300,
@@ -580,7 +588,8 @@ summary_plotter <- function(results_df, summary) {
             category = !!category)
         
         id_heatmap_data <- id_order %>%
-            separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
+            separate(id_2, into = c("is_filtered", "pipelines"), sep = " - ", remove = FALSE) %>%
+            separate(pipelines, into = c("pipeline_a", "pipeline_b"), sep = "-", remove = TRUE) %>%
             separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
             separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
             dplyr::select(-mean_score) %>%
@@ -602,8 +611,8 @@ summary_plotter <- function(results_df, summary) {
             ggplot(aes(y = id_2, x = method, fill = as_factor(pipeline_num), alpha=0.5)) +
             geom_tile() +
             scale_fill_manual(values = c(
-                "filtered" = "purple",
-                "unfiltered" = "orange",
+                "Filtered" = "purple",
+                "Unfiltered" = "orange",
                 "Pipeline 1" = "#439425",
                 "Pipeline 2" = "darkred"
             )) +
@@ -660,7 +669,7 @@ summary_plotter <- function(results_df, summary) {
     merged_filename <- paste0(dataset, "__maxsd__", category)
 
     save_plot(
-        filename = paste0("../results/plots/", merged_filename, ".png"),
+        filename = paste0("./flop_results/paper_plots/", merged_filename, ".png"),
         plot = merged_plot,
         device = "png",
         dpi = 300,
@@ -669,7 +678,7 @@ summary_plotter <- function(results_df, summary) {
     )
 
     save_plot(
-        filename = paste0("../results/plots/", merged_filename, ".svg"),
+        filename = paste0("./flop_results/paper_plots/", merged_filename, ".svg"),
         plot = merged_plot,
         device = "svg",
         dpi = 300,
@@ -995,7 +1004,7 @@ figure_2 <- ggdraw() +
     draw_label('C.', x = 0.34, y = 0.44, size = 25)
 
 save_plot(
-    filename = paste0("../flop_results/paper_plots/", "figure_2", ".png"),
+    filename = paste0("./flop_results/paper_plots/", "figure_2", ".png"),
     plot = figure_2,
     device = "png",
     dpi = 300,
@@ -1126,8 +1135,8 @@ summarised_results_jaccard <- results_jaccard %>%
     summarise(meanval = mean(value), stdev = sd(value)) %>%
     ungroup() %>%
     # mutate(value = ifelse(status == "filtered", value, value*-1),
-    mutate(comparison = paste0(feature_1, " - ", name),
-    ranking = rank(meanval)) %>%
+    mutate(comparison = paste0(feature_1, " - ", name)) %>%
+    mutate(ranking = rank(meanval)) %>%
     mutate(angle = 90 - 360 * (.$ranking-0.5)/nrow(.),
     hjust = ifelse(angle < -90, 1, 0)) %>%
     mutate(angle = ifelse(angle < -90, angle+180, angle))
@@ -1149,7 +1158,7 @@ sorted_results_jaccard <- results_jaccard %>%
             grepl("vsn", name) ~ "vsn+l",
             grepl("log2quant", name) ~ "logQ+l")
         ) %>%
-    mutate(id = paste(feature_1, name, sep = ' - ')) %>%
+    mutate(id = paste0(feature_1, " - ", name)) %>%
     left_join(., (summarised_results_jaccard %>% dplyr::select(comparison, ranking, status)), by = c("id" = "comparison", "status" = "status")) %>%
     mutate(ranking = ranking)
 
@@ -1173,7 +1182,7 @@ jaccard_circular_plot_data <- results_jaccard %>%
             grepl("log2quant", name) ~ "logQ+l")
         ) %>%
     mutate(comparison = paste0(feature_1, " - ", name),
-        ranking = rank(meanval)) %>%
+    ranking = rank(meanval)) %>%
     rbind(tibble(feature_1 = rep("", ceiling(nrow(.))), 
         name = rep("", ceiling(nrow(.))), 
         status = rep("", ceiling(nrow(.))), 
@@ -1208,11 +1217,11 @@ jaccard_circular_barplot <- ggplot(jaccard_circular_plot_data) +
                 "Unfiltered" = "#d8b365"
             )) +
     # geom_errorbar(aes(x = ranking, ymin=meanval-stdev, ymax=meanval+stdev), position = position_dodge())  +
-    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = -Inf, xmax = (nrow(circular_plot_data[!is.na(circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.5 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5),
+    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = -Inf, xmax = (nrow(jaccard_circular_plot_data[!is.na(jaccard_circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.5 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5),
                 fill = "#d04a35", colour = NA, alpha = 0.2) +
-    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = (nrow(circular_plot_data[!is.na(circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.5 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5), xmax = (nrow(circular_plot_data[!is.na(circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.8 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5),
+    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = (nrow(jaccard_circular_plot_data[!is.na(jaccard_circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.5 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5), xmax = (nrow(jaccard_circular_plot_data[!is.na(jaccard_circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.8 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5),
                 fill = "#b7ba2e", colour = NA, alpha = 0.2) +
-    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = (nrow(circular_plot_data[!is.na(circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.8 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5), xmax = nrow(circular_plot_data[!is.na(circular_plot_data$meanval),]) + 0.5,
+    annotate(geom = "rect", ymin = 1.08, ymax = 1.5, xmin = (nrow(jaccard_circular_plot_data[!is.na(jaccard_circular_plot_data$meanval),]) + 0.5) - (nrow(jaccard_circular_plot_data[jaccard_circular_plot_data$meanval>0.8 & !is.na(jaccard_circular_plot_data$meanval),]) + 0.5), xmax = nrow(jaccard_circular_plot_data[!is.na(jaccard_circular_plot_data$meanval),]) + 0.5,
                 fill = "#439425", colour = NA, alpha = 0.2) +
     geom_text(aes(x = ranking, y = 1.7, label = comparison, hjust = hjust, angle = angle), color="black", size=7) +
     geom_text(aes(x = ranking, y = 1.12, label = round(meanval, digits = 2), hjust = hjust, angle = angle), color="black", size=6)
@@ -1233,7 +1242,7 @@ figure_3 <- ggdraw() +
     draw_label('D.', x = 0.8, y = 0.99, size = 25)
 
 save_plot(
-    filename = paste0("../flop_results/paper_plots/", "figure_3", ".png"),
+    filename = paste0("./flop_results/paper_plots/", "figure_3", ".png"),
     plot = figure_3,
     device = "png",
     dpi = 300,
@@ -1328,7 +1337,7 @@ figure_4 <- ggdraw() +
     draw_label('B.', x = 0.3, y = 0.97, size = 25)
 
 save_plot(
-    filename = paste0("../flop_results/paper_plots/", "figure_4", ".png"),
+    filename = paste0("./flop_results/paper_plots/", "figure_4", ".png"),
     plot = figure_4,
     device = "png",
     dpi = 300,
@@ -1368,7 +1377,7 @@ rank_jaccard_plots <- ggdraw() +
 
 
 save_plot(
-    filename = paste0("../flop_results/paper_plots/", "filtering_plots", ".png"),
+    filename = paste0("./flop_results/paper_plots/", "filtering_plots", ".png"),
     plot = rank_jaccard_plots,
     device = "png",
     dpi = 300,

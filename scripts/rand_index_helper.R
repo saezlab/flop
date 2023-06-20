@@ -21,10 +21,10 @@ clustering_k <- function(merged_data, k, resource, status_i) {
       ) %>%
       column_to_rownames("id")
     cluster <- numeric_data %>%
-      dist() %>%
-      hclust(., "ave")
-    hcdata <- hc_calculator(cluster, k)
+      dist()
+    hcdata <- hc_calculator(hclust(cluster, "ave"), k)
     cluster_results[[status_i]][[resource]][[pipeline]] <- hcdata
+    cluster_results[[status_i]][[resource]][[pipeline]]$dist <- cluster
   }
   return(cluster_results)
 }

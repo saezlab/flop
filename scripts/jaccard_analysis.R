@@ -31,6 +31,7 @@ jaccard_calc <- function(data, pipelines) {
 jaccard_analysis <- function(merged_data) {
     pipelines <- merged_data %>%
         distinct(pipeline) %>%
+        arrange() %>%
         pull()
     jaccard_results <- merged_data %>%
         group_by(statparam, resource, bio_context, status, main_dataset) %>%
