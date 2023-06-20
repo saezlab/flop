@@ -17,7 +17,7 @@ To run FLOP, you need to have conda installed in your computer. Please check [th
 This command will install the necessary dependencies inside an environment.
 
 ```bash
-conda env create -f config_env.yaml
+conda env create -f ./scripts/config_env.yaml
 conda activate flop
 ```
 
@@ -28,7 +28,7 @@ Once installed, you are ready to run FLOP!
 Mode of usage:
 
 ```bash
-flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
+bash flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
 ```
 
 FLOP has several ways of personalization. These are all possible input parameters:
@@ -45,13 +45,13 @@ FLOP has several ways of personalization. These are all possible input parameter
 You can run FLOP with the minimal settings by using this command:
 
 ```bash
-flop_launcher.sh [-d data_folder] [-e config_set]
+bash flop_launcher.sh [-d data_folder] [-e config_set]
 ```
 
 Also, it is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA dataset via:
 
 ```bash
-flop_launcher.sh -t [-e config_set]
+bash flop_launcher.sh -t [-e config_set]
 ```
 
 # Input

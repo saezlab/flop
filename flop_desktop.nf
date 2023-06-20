@@ -62,7 +62,7 @@ process diffexp_analysis{
 //Merges the output of differential expression analysis files
 process output_merge_de{
 
-    publishDir "$params.parent_folder/flop_results/diffexp", mode: 'move'
+    publishDir "$params.parent_folder/flop_results/diffexp", mode: 'copy'
 
     input:
     path scripts_dir
