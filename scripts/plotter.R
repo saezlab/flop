@@ -71,7 +71,7 @@ analysis_types <- files_info %>%
     pull()
 
 results_rank <- files_info %>%
-    filter(type == "total", analysis == "rank") %>%
+    filter(type == "merged", analysis == "rank") %>%
     pull(path) %>%
     lapply(., read_tsv) %>%
     bind_rows() %>%
@@ -238,6 +238,7 @@ plotter <- function(results_df, category) {
                         `progeny` = "PROGENy",
                         `Rank correlation`= "Rank correlation",
                         `Rand Index`= "Rand Index",
+                        `DE` = "DE",
                         `Jaccard Index`= "Jaccard Index"))) +
                 theme_cowplot() +
                 theme(
@@ -281,8 +282,6 @@ plotter <- function(results_df, category) {
     }
 }
 
-read_tsv('./flop_results/filtered/rank/GSE186341__total__rank.tsv') %>% distinct(bio_context) %>% count()
-read_tsv('./flop_results/rank/GSE186341__total__rank.tsv') %>% distinct(bio_context) %>% count()
 
 # rank_plotter <- function(results_df, category){
 #     plots_list <- list()

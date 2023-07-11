@@ -21,12 +21,14 @@ library(DESeq2)
 limma_analysis <- function(data_norm, metadata){
   norm_counts <- data_norm %>% dplyr::select_if(is.numeric)
   
-  metadata <- metadata %>%
-    dplyr::select(sample_ID, group)
-  
+  covariates <- metadata %>%
+    dplyr::select(-sample_ID) %>% 
+    .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+    sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
+
   designmat <- metadata %>%
-    dplyr::select(sample_ID, group) %>%
-    model.matrix(~ 0 + group, data=.)
+    model.matrix(as.formula(rlang::parse_expr(paste(c("~ 0", covariates), collapse = " + "))), data=.)
+  
   studygroups <- levels(metadata$group)
   
   coefs <- paste("group", studygroups[1], "-", "group", studygroups[2], sep='')
@@ -66,10 +68,15 @@ deseq2_analysis <- function(counts, metadata) {
   rownames(gene_counts) <- counts$gene_symbol
   gene_counts <- gene_counts %>% 
     dplyr::select(-gene_symbol)
+
+  covariates <- metadata %>%
+    dplyr::select(-sample_ID) %>% 
+    .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+    sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
   
   formatted_data <- DESeqDataSetFromMatrix(countData = gene_counts, 
                                            colData = metadata, 
-                                           design = ~ 0+ group)
+                                           design = as.formula(rlang::parse_expr(paste(c("~ 0", covariates), collapse = " + "))))
   studygroups <- levels(metadata$group)
   coefs <- paste("group", studygroups[1], "-", "group", studygroups[2], sep='')
   
@@ -97,11 +104,15 @@ deseq2_analysis <- function(counts, metadata) {
 #' @examples
 #' edger_analysis(vsn_results, metadata_cancer)
 edger_analysis <- function(counts, metadata) {
-  dge_obj <- counts %>% dplyr::select_if(is.numeric) %>% DGEList(count=.)
+  dge_obj <- counts %>% dplyr::select_if(is.numeric) %>% DGEList(count=., samples = metadata)
   
+  covariates <- metadata %>%
+    dplyr::select(-sample_ID) %>% 
+    .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+    sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
+
   designmat <- metadata %>%
-    dplyr::select(sample_ID, group) %>%
-    model.matrix(~ 0 + group, data=.)
+    model.matrix(as.formula(rlang::parse_expr(paste(c("~ 0", covariates), collapse = " + "))), data=.)
   
   studygroups <- levels(metadata$group)
   coefs <- paste("group", studygroups[1], "-", "group", studygroups[2], sep = '')

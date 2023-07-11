@@ -134,10 +134,10 @@ fi
 
 if [ -z $perturbation_array ]; then
   if [ $config_set = "desktop" ]; then
-          echo "Running FLOP on a desktop computer... No cluster"
+          echo "Running FLOP on a desktop computer... No rand index analysis"
           nextflow -C flop.config run flop_desktop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh"
   elif [ $config_set = "cluster" ]; then
-          echo "Running FLOP on a slurm-controlled cluster... No cluster"
+          echo "Running FLOP on a slurm-controlled cluster... No rand index analysis"
           nextflow -C flop.config run flop.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh"
   else
           echo "Valid options: desktop, cluster"

@@ -2,7 +2,7 @@ library(tidyverse)
 library(nlme)
 library(fossil)
 
-datafile <- "./results/fullmerged/GSE186341__fullmerge.tsv"
+datafile <- "./flop_results/funcomics/fullmerged/GSE186341__fullmerge.tsv"
 dataset_id <- "GSE186341"
 path_file <- "./scripts/"
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -24,11 +24,11 @@ statparam <- "stat"
 
 #K rand index variation
 sep_bio_context <- bio_context %>% as_tibble() %>% separate(col = value, into =c('cell_line', 'treatment'))
-cell_lines <- sep_bio_context %>% distinct(cell_line) %>% mutate(num_clust = seq(1,11))
-treatments <- sep_bio_context %>% distinct(treatment) %>% mutate(num_clust = seq(1,32))
+cell_lines <- sep_bio_context %>% distinct(cell_line) %>% mutate(num_clust = seq(1,length(unique(cell_line))))
+treatments <- sep_bio_context %>% distinct(treatment) %>% mutate(num_clust = seq(1,length(unique(treatment))))
 cell_line_clust <- tibble(bio_context) %>% separate(col = bio_context, into =c('cell_line', 'treatment'), remove = FALSE) %>% inner_join(.,cell_lines, by = "cell_line") %>% select(-treatment)
 treatment_clust <- tibble(bio_context) %>% separate(col = bio_context, into =c('cell_line', 'treatment'), remove = FALSE) %>% inner_join(.,treatments, by = "treatment") %>% select(-cell_line)
-k_values <- seq(1, 32, 1)
+k_values <- seq(1, nrow(treatments), 1)
 ground_truths <- c(cell_line_clust, treatment_clust)
 rand_results_long <- tibble()
 
@@ -45,7 +45,7 @@ for (status_i in status) {
       as.data.frame()
       cluster_results <- clustering_k(merged_data, i, resource, status_i)
       for (pipeline1 in pipelines) {
-        if (i == 11) {
+        if (i == nrow(cell_lines)) {
           sorted_cell_line <- cluster_results[[status_i]][[resource]][[pipeline1]]$labels %>% left_join(cell_line_clust, by=c('label' = 'bio_context')) %>% pull(num_clust)
           rand_result <- adj.rand.index(
             cluster_results[[status_i]][[resource]][[pipeline1]]$labels$clust,
@@ -53,7 +53,7 @@ for (status_i in status) {
           )
           rand_results[pipeline1, "cell_line"] <- rand_result
 
-        } else if (i == 32) {
+        } else if (i == nrow(treatments)) {
           sorted_treatment <- cluster_results[[status_i]][[resource]][[pipeline1]]$labels %>% left_join(treatment_clust, by=c('label' = 'bio_context')) %>% pull(num_clust)
           rand_result <- adj.rand.index(
             cluster_results[[status_i]][[resource]][[pipeline1]]$labels$clust,
@@ -71,8 +71,8 @@ for (status_i in status) {
           values_to = "scores"
         ) %>%
         mutate(k = i, main_dataset = !!dataset_id) %>%
-        filter(!(ground_truth == "cell_line" & k == 32)) %>%
-        filter(!(ground_truth == "treatment" & k == 11)) %>%
+        filter(!(ground_truth == "cell_line" & k == nrow(treatments))) %>%
+        filter(!(ground_truth == "treatment" & k == nrow(cell_lines))) %>%
         rowwise() %>%
         mutate(
           resource = !!resource,
@@ -83,5 +83,5 @@ for (status_i in status) {
   }
 }
 
-write_tsv(rand_results_long, file = paste0("./results/rand_index/", dataset_id, "__bio__adj__randindex.tsv"))
+write_tsv(rand_results_long, file = paste0("./flop_results/funcomics/rand_index/", dataset_id, "__bio__adj__randindex.tsv"))
 
