@@ -24,6 +24,24 @@ rank_info <- list.files(
     ) %>%
     dplyr::rename(path = value)
 
+full_info <- list.files(
+    path = "./flop_results/funcomics/fullmerged/",
+    pattern = "*__fullmerge.tsv",
+    full.names = TRUE
+) %>%
+    as_tibble() %>%
+    separate(
+        col = value,
+        into = c("dataset", "type", "ext"),
+        sep = "__", remove = FALSE
+    ) %>%
+    select(-ext) %>%
+    mutate(
+        dataset = sub("./flop_results/funcomics/fullmerged/", "", dataset),
+        analysis = "fullmerge"
+    ) %>%
+    dplyr::rename(path = value)
+
 randindex_info <- list.files(
     path = "./flop_results/funcomics/rand_index/",
     pattern = "*__randindex.tsv",
@@ -82,6 +100,15 @@ results_rank <- files_info %>%
     #         grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
     #     ))
 
+results_fullmerge <- full_info %>% 
+    pull(path) %>%
+    lapply(., read_tsv) %>%
+    bind_rows()#%>% 
+    # mutate(status = case_when(
+    #         grepl("\\bfiltered\\b", status) ~ "Filtered",
+    #         grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+    #     ))
+
 results_rank_norm <- files_info %>%
     filter(type == "norm", analysis == "rank") %>%
     pull(path) %>%
@@ -112,7 +139,7 @@ results_jaccard <- files_info %>%
 # Dotplots 
 
 results_rank_points <- results_rank %>%
-    filter(type == "correlation", statparam == 'stat') %>%
+    filter(type == "correlation", statparam == 'stat', main_dataset == 'CCLE') %>%
     group_by(id, resource) %>%
     summarise(feature_1 = feature_1, name = name, sd = sd(value), value = mean(value))
 
@@ -150,14 +177,14 @@ results_rank_points <- results_rank_points %>%
 # Figure 2
 # A
 
-resources <- c('DE', 'DoRothEA')
 heatmaps_list <- c()
 col_fun = circlize::colorRamp2(c(0, 0.5, 1), c("blue", "white", "red"))
 lgd = Legend(col_fun = col_fun, title = 'Spearman rank correlation', legend_height = unit(8, "cm"), title_position = "leftcenter-rot")
 lgd_anno = Legend(labels = c('Filtered', 'Unfiltered'), title = "Status", legend_gp = gpar(fill = c('#47d3b4', '#de4ce3')))
-for(resource in resources){
-    correlation_matrix <- results_rank %>%
-        filter(type == "correlation", statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14'), resource == ifelse(!!resource == 'DE', !!resource, tolower(!!resource))) %>%
+
+heatmap_plotter <- function(data, facet, datasets, resource){
+    correlation_matrix <- data %>%
+        filter(statparam == 'stat', main_dataset %in% !!datasets, resource == ifelse(!!resource == 'DE', !!resource, tolower(!!resource))) %>%
         select(feature_1,name,value) %>%
         arrange(feature_1) %>%
         bind_rows(., tibble(
@@ -169,28 +196,45 @@ for(resource in resources){
             feature_1 = unique(c(.$feature_1, .$name)),
             name = unique(c(.$feature_1, .$name)),
             value = 1)
-
         ) %>%
         pivot_wider(names_from=name, values_from=value, values_fn = mean) %>%
-        column_to_rownames('feature_1') %>% select(rownames(.)) %>% as.matrix()
+        column_to_rownames('feature_1') %>% 
+        select(rownames(.)) %>% 
+        as.matrix()
 
     pipelines_status <- rownames(correlation_matrix) %>% gsub('-.*', '', .)
-    
+    col_fun = circlize::colorRamp2(c(0, 0.5, 1), c("blue", "white", "red"))
+    lgd = Legend(col_fun = col_fun, title = 'Spearman rank correlation', legend_height = unit(8, "cm"), title_position = "leftcenter-rot")
+    lgd_anno = Legend(labels = c('Filtered', 'Unfiltered'), title = "Status", legend_gp = gpar(fill = c('#47d3b4', '#de4ce3')))
     hc = HeatmapAnnotation(Filtering= pipelines_status,  col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), show_annotation_name = FALSE, show_legend = FALSE)
     hr = HeatmapAnnotation(Filtering= pipelines_status, col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), which = "row", show_annotation_name = FALSE, show_legend = FALSE)
 
     heatmap <- ComplexHeatmap::Heatmap(correlation_matrix, cluster_rows = TRUE, cluster_columns = TRUE, col = col_fun,
-        column_title = resource, show_heatmap_legend = FALSE, width = unit(8, "cm"), height = unit(8, "cm"), bottom_annotation = hc, right_annotation = hr)
+        column_title = paste0(facet, ", ", resource), show_heatmap_legend = FALSE, width = unit(8, "cm"), height = unit(8, "cm"), bottom_annotation = hc, right_annotation = hr)
 
-    heatmaps_list <- heatmaps_list + heatmap
+    heatmap_grob <- grid::grid.grabExpr(draw(heatmap))
+
+    ggsave(plot = heatmap_grob, filename = paste("./flop_results/paper_plots/heatmap", paste(datasets, collapse = '-'),resource, facet, ".png", sep = '__'), width = 16, height = 16, units = 'cm', dpi = 300)
 }
 
-heatmap_grob <- grid::grid.grabExpr(draw(heatmaps_list, ht_gap = unit(2, "cm")))
+
+datasets <- c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')
+heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', datasets, 'MSigDB_Hallmarks')
+heatmap_plotter(results_jaccard, 'Jaccard index', datasets, 'MSigDB_Hallmarks')
+
+heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', 'MSigDB_Hallmarks')
+heatmap_plotter(results_jaccard, 'Jaccard index', 'GSE186341', 'MSigDB_Hallmarks')
+
 legend_grob <- grid::grid.grabExpr(draw(lgd))
 legend_anno_grob <- grid::grid.grabExpr(draw(lgd_anno))
+ggsave(plot = legend_grob, filename = "./flop_results/paper_plots/heatmap_legend.png", width = 5, height = 16, units = 'cm', dpi = 300)
+ggsave(plot = legend_anno_grob, filename = "./flop_results/paper_plots/heatmap_legend_annotation.png", width = 5, height = 5, units = 'cm', dpi = 300)
+
+# heatmap_grob <- grid::grid.grabExpr(draw(heatmaps_list, ht_gap = unit(2, "cm")))
 
 
-results_rank_correlation <- results_rank %>% filter(type == 'correlation', statparam == 'stat', main_dataset != 'GSE186341') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+
+results_rank_correlation <- results_rank %>% filter(statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14'), type == 'correlation') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
     mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
                                 grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
                                 grepl('progeny', resource) ~ 'PROGENy',
@@ -211,7 +255,7 @@ boxplot_rank <- ggplot(results_rank_correlation, aes(x = resource, y = value, fi
         axis.title.x = element_blank(),
         text = element_text(size = 12))
 
-results_jaccard_boxplot <- results_jaccard %>% filter(statparam == 'stat', main_dataset != 'GSE186341') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+results_jaccard_boxplot <- results_jaccard %>% filter(statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')) %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
     mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
                                 grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
                                 grepl('progeny', resource) ~ 'PROGENy',
@@ -234,8 +278,6 @@ boxplot_jaccard <- ggplot(results_jaccard_boxplot, aes(x = resource, y = value, 
         axis.text = element_text(size = 12))
 
 boxplots_merged <- egg::ggarrange(plots=list(boxplot_rank, boxplot_jaccard), nrow = 1, align = "h", padding = unit(10, "cm"))
-
-
 
 figure_2 <- ggdraw() +
     draw_plot(heatmap_grob, 0.04, 0.17, 0.96, 1) +

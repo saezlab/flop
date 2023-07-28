@@ -36,7 +36,7 @@ else:
 #     output_file = input_file.replace('__decouplerinput.tsv', '__{}__{}__decoupleroutput.tsv'.format(suffixes[i], resource))
 #     dc_output.to_csv(output_file, sep='\t')
 
-selected_results = dc_result[1]
+selected_results = dc_result[0]
 newtags = [name + '__' + 'mean' for name in selected_results.index.values]
 selected_results.index = newtags
 dc_output = selected_results
