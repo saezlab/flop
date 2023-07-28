@@ -28,18 +28,20 @@ jaccard_calc <- function(data, pipelines) {
 #' @examples
 #' jaccard_analysis(merged_data)
 jaccard_analysis <- function(merged_data) {
-    pipelines <- merged_data %>%
-        distinct(pipeline) %>%
-        arrange() %>%
-        pull()
+    merged_data <- merged_data %>%
+        mutate(status_pipeline = paste0(status, "-", pipeline))
     jaccard_results <- merged_data %>%
-        group_by(statparam, resource, bio_context, status, main_dataset) %>%
+        group_by(statparam, resource, bio_context, main_dataset) %>%
         group_split() %>%
         purrr::map(., function(x) {
+            pipelines <- x %>%
+                distinct(status_pipeline) %>%
+                arrange() %>%
+                pull()
             to_analyse <- x %>%
-                select(pipeline, scores, items) %>%
+                select(status_pipeline, scores, items) %>%
                 pivot_wider(
-                    names_from = pipeline,
+                    names_from = status_pipeline,
                     values_from = scores,
                     values_fn = {
                         mean
@@ -47,17 +49,17 @@ jaccard_analysis <- function(merged_data) {
                 ) %>%
                 pivot_longer(
                     cols = -items,
-                    names_to = "pipeline",
+                    names_to = "status_pipeline",
                     values_to = "scores"
                 )
             resource <- x %>%
                 distinct(resource) %>%
                 pull()
-            if (resource == "progeny") {
+            if (grepl("progeny", resource)) {
                 n_extr <- 3
-            } else if (resource == "dorothea") {
+            } else if (grepl("dorothea", resource)) {
                 n_extr <- 15
-            } else if (resource == "msigdb_hallmarks") {
+            } else if (grepl("msigdb_hallmarks", resource)) {
                 n_extr <- 5
             } else {
                 n_extr <- round(length(x$items)*0.05)
@@ -65,11 +67,11 @@ jaccard_analysis <- function(merged_data) {
             item_collector <- list()
             for (pipeline in pipelines) {
                 max_items <- to_analyse %>%
-                    filter(pipeline == !!pipeline) %>%
+                    filter(status_pipeline == !!pipeline) %>%
                     slice_max(scores, n = n_extr) %>%
                     pull(items)
                 min_items <- to_analyse %>%
-                    filter(pipeline == !!pipeline) %>%
+                    filter(status_pipeline == !!pipeline) %>%
                     slice_min(scores, n = n_extr) %>%
                     pull(items)
                 extreme_items <- c(max_items, min_items)
@@ -84,7 +86,6 @@ jaccard_analysis <- function(merged_data) {
                     statparam = unique(x$statparam),
                     bio_context = unique(x$bio_context),
                     resource = unique(x$resource),
-                    status = unique(x$status),
                     main_dataset = unique(x$main_dataset)
                 )
 
@@ -105,7 +106,6 @@ jaccard_analysis <- function(merged_data) {
             statparam,
             bio_context,
             resource,
-            status,
             main_dataset,
             .keep_all = TRUE
         )

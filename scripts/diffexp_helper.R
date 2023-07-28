@@ -23,7 +23,7 @@ limma_analysis <- function(data_norm, metadata){
   
   covariates <- metadata %>%
     dplyr::select(-sample_ID) %>% 
-    .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+    # .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
     sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
 
   designmat <- metadata %>%

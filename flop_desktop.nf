@@ -69,7 +69,7 @@ process output_merge_de{
     tuple val(datasetID), path(diffexpr_files)
  
     output:
-    path ('*__deresults.tsv')
+    tuple val(datasetID), path ('*__deresults.tsv')
 
     //afterScript "rm -f ${diffexpr_files}"
     
@@ -165,7 +165,7 @@ process rank_analysis{
 
     input:
     path scripts_dir
-    tuple val(datasetID), path (analysis_results)
+    tuple val(datasetID), path (func_results), path (de_results)
 
     output:
     tuple val(datasetID), path ("*__rank.tsv")
@@ -173,7 +173,7 @@ process rank_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/rank_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/rank_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results}
     """
 }
 
@@ -208,7 +208,7 @@ process jaccard_analysis{
 
     input:
     path scripts_dir
-    tuple val(datasetID), path (analysis_results)
+    tuple val(datasetID), path (func_results), path (de_results)
 
     output:
     tuple val(datasetID), path ("*__jaccard.tsv")
@@ -216,7 +216,7 @@ process jaccard_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --file ${analysis_results}
+    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results}
     """
 }
 
@@ -239,7 +239,7 @@ workflow {
     Channel
         .of('logFC', 'stat')
         // .view()
-        .set {diffexpr_methods}
+        .set {diffexpr_metrics}
     
     Channel
         .of(params.perturbation)
@@ -283,8 +283,9 @@ workflow {
         .set {diffexpr_out}
     
     output_merge_de(params.scripts_dir,diffexpr_out)
+        .set {diffexpr_merged}
 
-    downstream_merge_de(params.scripts_dir,diffexpr_files,diffexpr_methods, params.ngenes_threshold)
+    downstream_merge_de(params.scripts_dir,diffexpr_files,diffexpr_metrics, params.ngenes_threshold)
         // .view{"Decoupler input: $it \n"}
         .set {mergede}
     
@@ -303,7 +304,10 @@ workflow {
         .set {subset_results}
 
     subset_merger(params.scripts_dir, subset_results)
-        // .view{"subset: $it"}
+        .view{"subset: $it"}
+        .concat(diffexpr_merged)
+        .groupTuple(by:0, size:2)
+        .map{it -> tuple it[0], it[1][0], it[1][1]}
         .set {full_results}
 
     rank_analysis(params.scripts_dir, full_results)

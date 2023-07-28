@@ -10,15 +10,16 @@
 #' @export
 #' @examples
 #' corr_analysis(merged_data, "stats")
-corr_analysis <- function(merged_data, corrparam) {
+corr_analysis <- function(merged_data) {
   cor_results <- merged_data %>%
-    group_by(statparam, resource, bio_context, status, main_dataset) %>%
+    mutate(status_pipeline = paste0(status, "-", pipeline)) %>%
+    group_by(statparam, resource, bio_context, main_dataset) %>%
     group_split() %>% 
     purrr::map(., function(x) {
       to_cor <- x %>%
-        select(!!corrparam, scores, items) %>%
+        select(status_pipeline, scores, items) %>%
         pivot_wider(
-          names_from = !!corrparam,
+          names_from = status_pipeline,
           values_from = scores,
           values_fn = {mean}
         ) %>%
@@ -26,19 +27,42 @@ corr_analysis <- function(merged_data, corrparam) {
         select(order(colnames(.))) %>%
         as.matrix()
 
-      cor_results <- cor(to_cor, method = "spearman") %>%
+      cor_results_mat <- cor(to_cor, method = "spearman", use = 'complete.obs') 
+      test = cor(to_cor[complete.cases(to_cor),], method = "spearman", use = 'complete.obs') 
+      all(test == cor_results_mat)
+      occ_mat <- ifelse(is.na(to_cor), 0, 1)
+      mat_crossprod <- crossprod(occ_mat)
+      
+      mat_crossprod[upper.tri(mat_crossprod)] <- NA
+
+      mat_crossprod_df <- mat_crossprod %>% 
+        as.data.frame() %>% 
+        rownames_to_column(var = "feature_1") %>% 
+        pivot_longer(-feature_1) %>% 
+        filter(!is.na(value)) %>%
+        mutate(
+          type = "occurrence",
+          statparam = unique(x$statparam),
+          bio_context = unique(x$bio_context),
+          resource = unique(x$resource),
+          main_dataset = unique(x$main_dataset)
+        )
+
+      cor_results <- cor_results_mat %>%
         as.data.frame() %>%
         rownames_to_column(var = "feature_1") %>%
         pivot_longer(-feature_1) %>%
         mutate(
+          type = "correlation",
           statparam = unique(x$statparam),
           bio_context = unique(x$bio_context),
           resource = unique(x$resource),
-          status = unique(x$status),
           main_dataset = unique(x$main_dataset)
         )
+      
+      full_df <- bind_rows(mat_crossprod_df, cor_results)
 
-      return(cor_results)
+      return(full_df)
 
     }) %>%
     bind_rows() %>%
@@ -53,10 +77,10 @@ corr_analysis <- function(merged_data, corrparam) {
     ) %>%
     distinct(
       id,
+      type,
       statparam,
       bio_context,
       resource,
-      status,
       main_dataset,
       .keep_all = TRUE)
   return(cor_results)

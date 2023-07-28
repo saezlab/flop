@@ -3,6 +3,7 @@ library(stats)
 library(cowplot)
 library(egg)
 library(grid)
+library(ComplexHeatmap)
 # setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 files_info <- tibble()
 rank_info <- list.files(
@@ -71,15 +72,15 @@ analysis_types <- files_info %>%
     pull()
 
 results_rank <- files_info %>%
-    filter(type == "merged", analysis == "rank") %>%
+    filter(type == "total", analysis == "rank") %>%
     pull(path) %>%
     lapply(., read_tsv) %>%
     bind_rows() %>%
-    filter(statparam == "stat") %>% 
-    mutate(status = case_when(
-            grepl("\\bfiltered\\b", status) ~ "Filtered",
-            grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
-        ))
+    filter(statparam == "stat") #%>% 
+    # mutate(status = case_when(
+    #         grepl("\\bfiltered\\b", status) ~ "Filtered",
+    #         grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+    #     ))
 
 results_rank_norm <- files_info %>%
     filter(type == "norm", analysis == "rank") %>%
@@ -96,42 +97,337 @@ results_rank_diffexp <- files_info %>%
     filter(statparam == "stat")
 
 results_jaccard <- files_info %>%
-    filter(analysis == "jaccard") %>%
+    filter(type == 'jaccard.tsv', analysis == "jaccard") %>%
     pull(path) %>% 
     lapply(., read_tsv) %>%
     bind_rows() %>%
     filter(statparam == "stat") %>%
-    mutate(status = case_when(
-            grepl("\\bfiltered\\b", status) ~ "Filtered",
-            grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
-        )) %>%
+    # mutate(status = case_when(
+    #         grepl("\\bfiltered\\b", status) ~ "Filtered",
+    #         grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+    #     )) %>%
     select(-feature_1, -name) %>%
     separate(id, into = c('feature_1', 'name'), sep = " - ", remove = FALSE)
 
-results_randindex <- files_info %>%
-    filter(analysis == "randindex", dataset == "GSE186341", type == "randindex.tsv") %>%
-    pull(path) %>%
-    lapply(., read_tsv) %>%
-    bind_rows() %>%
-    mutate(status = case_when(
-            grepl("\\bfiltered\\b", status) ~ "Filtered",
-            grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+# Dotplots 
+
+results_rank_points <- results_rank %>%
+    filter(type == "correlation", statparam == 'stat') %>%
+    group_by(id, resource) %>%
+    summarise(feature_1 = feature_1, name = name, sd = sd(value), value = mean(value))
+
+results_occurrence <- results_rank %>%
+    filter(type == "occurrence", statparam == 'stat') %>%
+    group_by(id, resource) %>%
+    summarise(feature_1 = feature_1, name = name, sd = sd(value), value = mean(value))
+
+occurrence_boxplots <- ggplot(results_occurrence, aes(x=id, y=value)) +
+    geom_boxplot() +
+    facet_grid(~resource) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ocurrence_dotplot <- ggplot(results_occurrence, aes(x=feature_1, y=name)) +
+    geom_point(aes(color = log(value), size = sd)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0))+
+    facet_grid(~resource)
+
+ggsave("./flop_results/paper_plots/correlation_dotplots.png", ocurrence_dotplot, width = 15, height = 5)
+
+
+
+correlation_dotplot <- ggplot(results_rank_points, aes(x=feature_1, y=name)) +
+    geom_point(aes(color = value, size = sd)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0))
+
+ggsave("./flop_results/paper_plots/correlation_dotplots.png", correlation_dotplot, width = 15, height = 5)
+
+library(ggdendro)
+
+results_rank_points <- results_rank_points %>%
+    filter(resource == 'dorothea')
+
+
+# Figure 2
+# A
+
+resources <- c('DE', 'DoRothEA')
+heatmaps_list <- c()
+col_fun = circlize::colorRamp2(c(0, 0.5, 1), c("blue", "white", "red"))
+lgd = Legend(col_fun = col_fun, title = 'Spearman rank correlation', legend_height = unit(8, "cm"), title_position = "leftcenter-rot")
+lgd_anno = Legend(labels = c('Filtered', 'Unfiltered'), title = "Status", legend_gp = gpar(fill = c('#47d3b4', '#de4ce3')))
+for(resource in resources){
+    correlation_matrix <- results_rank %>%
+        filter(type == "correlation", statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14'), resource == ifelse(!!resource == 'DE', !!resource, tolower(!!resource))) %>%
+        select(feature_1,name,value) %>%
+        arrange(feature_1) %>%
+        bind_rows(., tibble(
+            feature_1 = .$name,
+            name = .$feature_1,
+            value = .$value
         )) %>%
-    dplyr::rename(value = scores)
+        bind_rows(., tibble(
+            feature_1 = unique(c(.$feature_1, .$name)),
+            name = unique(c(.$feature_1, .$name)),
+            value = 1)
 
-results_randindex_bio <- files_info %>%
-    filter(analysis == "randindex", dataset == "GSE186341", type == "bio") %>%
-    pull(path) %>%
-    lapply(., read_tsv) %>%
-    bind_rows() %>%
-    filter(k == "10" | k == "22") %>%
-    dplyr::rename(value = scores)
+        ) %>%
+        pivot_wider(names_from=name, values_from=value, values_fn = mean) %>%
+        column_to_rownames('feature_1') %>% select(rownames(.)) %>% as.matrix()
 
-results_randindex_summary <- files_info %>%
-    filter(analysis == "randindex", dataset == "GSE186341", type == "summary") %>%
-    pull(path) %>%
-    lapply(., read_tsv) %>%
-    bind_rows()
+    pipelines_status <- rownames(correlation_matrix) %>% gsub('-.*', '', .)
+    
+    hc = HeatmapAnnotation(Filtering= pipelines_status,  col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), show_annotation_name = FALSE, show_legend = FALSE)
+    hr = HeatmapAnnotation(Filtering= pipelines_status, col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), which = "row", show_annotation_name = FALSE, show_legend = FALSE)
+
+    heatmap <- ComplexHeatmap::Heatmap(correlation_matrix, cluster_rows = TRUE, cluster_columns = TRUE, col = col_fun,
+        column_title = resource, show_heatmap_legend = FALSE, width = unit(8, "cm"), height = unit(8, "cm"), bottom_annotation = hc, right_annotation = hr)
+
+    heatmaps_list <- heatmaps_list + heatmap
+}
+
+heatmap_grob <- grid::grid.grabExpr(draw(heatmaps_list, ht_gap = unit(2, "cm")))
+legend_grob <- grid::grid.grabExpr(draw(lgd))
+legend_anno_grob <- grid::grid.grabExpr(draw(lgd_anno))
+
+
+results_rank_correlation <- results_rank %>% filter(type == 'correlation', statparam == 'stat', main_dataset != 'GSE186341') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+    mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
+                                grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
+                                grepl('progeny', resource) ~ 'PROGENy',
+                                grepl('DE', resource) ~ 'DE'))
+
+boxplot_rank <- ggplot(results_rank_correlation, aes(x = resource, y = value, fill = Space)) +
+    geom_boxplot(outlier.alpha = 0) +
+    ggpubr::stat_compare_means(aes(x=resource, y=value), comparisons = list(c('DE', 'DoRothEA'), c('DE', 'MSigDB Hallmarks'), c('DE', 'PROGENy')), size = 4, method = 'wilcox.test', method.args = list(alternative = 'greater', paired = TRUE, p.adjust.methods = "BH")) +
+    ylab('Spearman rank correlation') +
+    scale_fill_hue() +
+    ggforce::geom_sina(size = 0.5, alpha = 0.2) +
+    theme_cowplot() +
+    ylim(0, 1.3) +
+    theme(
+        plot.background = element_rect(fill = "white",colour = NA),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 12),
+        axis.title.x = element_blank(),
+        text = element_text(size = 12))
+
+results_jaccard_boxplot <- results_jaccard %>% filter(statparam == 'stat', main_dataset != 'GSE186341') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+    mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
+                                grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
+                                grepl('progeny', resource) ~ 'PROGENy',
+                                grepl('DE', resource) ~ 'DE'))
+
+
+boxplot_jaccard <- ggplot(results_jaccard_boxplot, aes(x = resource, y = value, fill = Space)) +
+    geom_boxplot(outlier.alpha = 0) +
+    ggpubr::stat_compare_means(aes(x=resource, y=value), comparisons = list(c('DE', 'DoRothEA'), c('DE', 'MSigDB Hallmarks'), c('DE', 'PROGENy')), size = 4, method = 'wilcox.test', method.args = list(alternative = 'greater', paired = TRUE, p.adjust.methods = "BH")) +
+    ylab('Jaccard index') +
+    scale_fill_hue() +
+    ggforce::geom_sina(size = 0.5, alpha = 0.2) +
+    theme_cowplot() +
+    ylim(0, 1.3) +
+    theme(
+        plot.background = element_rect(fill = "white",colour = NA),
+        axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1, size = 12),
+        axis.title.x = element_blank(),
+        text = element_text(size = 12), 
+        axis.text = element_text(size = 12))
+
+boxplots_merged <- egg::ggarrange(plots=list(boxplot_rank, boxplot_jaccard), nrow = 1, align = "h", padding = unit(10, "cm"))
+
+
+
+figure_2 <- ggdraw() +
+    draw_plot(heatmap_grob, 0.04, 0.17, 0.96, 1) +
+    draw_plot(legend_grob, -0.44, 0.24, 1, 1) +
+    draw_plot(legend_anno_grob, -0.44, 0.05, 1, 1) +
+    draw_plot(boxplot_rank, 0.08, 0, 0.32, 0.39) +
+    draw_plot(boxplot_jaccard, 0.44, 0, 0.445, 0.39) +
+    draw_label("A.", size = 20, x = 0.05, y = 0.95) +
+    draw_label("C.", size = 20, x = 0.05, y = 0.4) +
+    draw_label("B.", size = 20, x = 0.45, y = 0.95) +
+    draw_label("D.", size = 20, x = 0.45, y = 0.4)
+
+
+ggsave(plot = figure_2, filename = "./flop_results/paper_plots/figure_2.png", width = 30, height = 30, units = 'cm', dpi = 300)
+
+
+
+
+# Figure 3
+run_info <- read_tsv('./flop_results/traces/trace-20230719-36429954__ccle.txt') %>% mutate(vmem = as.numeric(gsub(' GB', '', vmem))) %>%
+    rowwise() %>%
+    filter(!process %in% c('jaccard_analysis', 'rank_analysis', 'output_merge_de', 'subset_merger', 'downstream_merge_de', 'decoupler_merger')) %>%
+    mutate(realtime = case_when(
+        length(unlist(strsplit(realtime, ' '))) == 1 ~ paste0("0h 0m ", realtime),
+        length(unlist(strsplit(realtime, ' '))) == 2 ~ paste0("0h ", realtime),
+        length(unlist(strsplit(realtime, ' '))) == 3 ~ realtime)) %>%
+    ungroup() %>%
+    mutate(realtime = hms(realtime)) %>% 
+    mutate(realtime = hour(realtime)*60 + minute(realtime) + second(realtime)/60) %>%
+    filter(!process %in% c('jaccard_analysis', 'rank_analysis', 'output_merge_de', 'subset_merger', 'downstream_merge_de', 'decoupler_merger'))
+
+
+memory_plot <- ggplot(run_info, aes(x = process, y = vmem)) +
+    geom_boxplot() + 
+    theme_cowplot() + 
+    ylab('Memory usage (GB)') +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+    axis.title.x = element_blank()) 
+
+time_plot <- ggplot(run_info, aes(x = process, y = realtime)) +
+    geom_boxplot() + 
+    theme_cowplot() + 
+    ylab('Time (minutes)') +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1),
+    axis.title.x = element_blank()) 
+
+boxplots_fig3 <- egg::ggarrange(plots=list(memory_plot, time_plot), nrow = 2, align = 'v')
+
+figure_3 <- ggdraw() +
+    draw_plot(boxplots_fig3, 0.05, 0.05, 0.9, 0.9) +
+    draw_label('A.', size = 20, x = 0.05, y = 0.95) +
+    draw_label('B.', size = 20, x = 0.05, y = 0.5)
+
+ggsave(plot = figure_3, filename = "./flop_results/paper_plots/figure_3.png", width = 30, height = 25, units = 'cm', dpi = 300)
+
+
+
+
+
+
+#Figure 4
+
+results_rank_figure4 <- results_rank %>% filter(statparam == 'stat', main_dataset == 'GSE186341', type == 'correlation', resource == 'dorothea') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+    mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA')
+    ) %>%
+    arrange(feature_1) %>%
+    group_by(statparam, bio_context, resource, status, main_dataset) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        pipelines <- unique(c(x$feature_1, x$name))
+        corr_1_df <- x %>% select(statparam, bio_context, resource, status, main_dataset) %>% distinct() %>%
+            bind_cols(., tibble(
+                feature_1 = pipelines,
+                name = pipelines,
+                value = 1))
+        inverted_corrs <- x %>% rename(feature_1 = name, name = feature_1)
+        updated_df <- bind_rows(corr_1_df, inverted_corrs, x)
+        return(updated_df)
+    }) %>% bind_rows() %>%
+    select(feature_1, name, value) %>%
+    pivot_wider(names_from=name, values_from=value, values_fn = mean) %>% column_to_rownames('feature_1') %>% select(rownames(.)) %>% as.matrix()
+
+results_jaccard_figure4 <- results_jaccard %>% filter(statparam == 'stat', main_dataset == 'GSE186341', resource == 'dorothea') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+    mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA')
+    ) %>% 
+    arrange(feature_1) %>%
+    group_by(statparam, bio_context, resource, status, main_dataset) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        pipelines <- unique(c(x$feature_1, x$name))
+        corr_1_df <- x %>% select(statparam, bio_context, resource, main_dataset) %>% distinct() %>%
+            bind_cols(., tibble(
+                feature_1 = pipelines,
+                name = pipelines,
+                value = 1))
+        inverted_corrs <- x %>% rename(feature_1 = name, name = feature_1)
+        updated_df <- bind_rows(corr_1_df, inverted_corrs, x)
+        return(updated_df)
+    }) %>% bind_rows() %>%
+    select(feature_1, name, value) %>%
+    group_by(feature_1, name) %>%
+    pivot_wider(names_from=name, values_from=value, values_fn = mean) %>% column_to_rownames('feature_1') %>% select(rownames(.)) %>% as.matrix()
+
+
+
+resource <- c('DoRothEA')
+heatmaps_list <- c()
+col_fun = circlize::colorRamp2(c(0, 0.5, 1), c("blue", "white", "red"))
+lgd = Legend(col_fun = col_fun, title = NULL, legend_height = unit(8, "cm"))
+
+pipelines_status <- rownames(results_rank_figure4) %>% gsub('-.*', '', .)
+
+hc = HeatmapAnnotation(Filtering= pipelines_status,  col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), show_annotation_name = FALSE, show_legend = FALSE)
+hr = HeatmapAnnotation(Filtering= pipelines_status, col = list(Filtering = c("filtered" = "#47d3b4", "unfiltered" = "#de4ce3")), which = "row", show_annotation_name = FALSE, show_legend = FALSE)
+
+heatmap <- ComplexHeatmap::Heatmap(results_rank_figure4, cluster_rows = TRUE, cluster_columns = TRUE,
+    column_title = paste0("Rank Correlation, ", resource), show_heatmap_legend = FALSE, width = unit(8, "cm"), height = unit(8, "cm"), bottom_annotation = hc, right_annotation = hr, col = col_fun)
+heatmap_jaccard <- ComplexHeatmap::Heatmap(results_jaccard_figure4, cluster_rows = TRUE, cluster_columns = TRUE,
+    column_title = paste0("Jaccard Index, ", resource), show_heatmap_legend = FALSE, width = unit(8, "cm"), height = unit(8, "cm"), bottom_annotation = hc, right_annotation = hr, col = col_fun)
+
+heatmaps_list <- heatmap + heatmap_jaccard
+
+
+heatmap_grob <- grid::grid.grabExpr(draw(heatmaps_list, ht_gap = unit(2, "cm")))
+legend_grob <- grid::grid.grabExpr(draw(lgd))
+
+figure_4 <- ggdraw() +
+    draw_plot(heatmap_grob) +
+    draw_plot(legend_grob, 0.05, 0.39, 0.1, 0.5) +
+    draw_plot(legend_anno_grob, 0.05, 0.05, 0.1, 0.5) +
+    draw_label("A.", size = 20, x = 0.1, y = 0.98) +
+    draw_label("B.", size = 20, x = 0.45, y = 0.98)
+
+ggsave(plot = figure_4, filename = "./flop_results/paper_plots/figure_4.png", width = 35, height = 16, units = 'cm', dpi = 300)
+# cor_dendro <- as.dendrogram(hclust(d = dist(x = correlation_matrix)))
+# dendro_plot <- ggdendrogram(data = cor_dendro, rotate = TRUE)
+# dendro_order <- order.dendrogram(cor_dendro)
+
+# results_rank_points$feature_1 <- factor(x = results_rank_points$feature_1,
+#                                levels = rownames(correlation_matrix)[dendro_order], 
+#                                ordered = TRUE)
+# results_rank_points$name <- factor(x = results_rank_points$name,
+#                                levels = rownames(correlation_matrix)[dendro_order], 
+#                                ordered = TRUE)
+
+
+# heatmap_plot <- ggplot(data = results_rank_points, aes(x = feature_1, y = name)) +
+#   geom_tile(aes(fill = value)) +
+#   scale_fill_gradient2(midpoint = 0.5) +
+#   theme(axis.text.y = element_text(size = 6))
+
+heatmap <- ComplexHeatmap::Heatmap(correlation_matrix, cluster_rows = TRUE, cluster_columns = TRUE)
+
+
+# results_randindex <- files_info %>%
+#     filter(analysis == "randindex", dataset == "GSE186341", type == "randindex.tsv") %>%
+#     pull(path) %>%
+#     lapply(., read_tsv) %>%
+#     bind_rows() %>%
+#     mutate(status = case_when(
+#             grepl("\\bfiltered\\b", status) ~ "Filtered",
+#             grepl("\\bunfiltered\\b", status) ~ "Unfiltered"
+#         )) %>%
+#     dplyr::rename(value = scores)
+
+# results_randindex_bio <- files_info %>%
+#     filter(analysis == "randindex", dataset == "GSE186341", type == "bio") %>%
+#     pull(path) %>%
+#     lapply(., read_tsv) %>%
+#     bind_rows() %>%
+#     filter(k == "10" | k == "22") %>%
+#     dplyr::rename(value = scores)
+
+# results_randindex_summary <- files_info %>%
+#     filter(analysis == "randindex", dataset == "GSE186341", type == "summary") %>%
+#     pull(path) %>%
+#     lapply(., read_tsv) %>%
+#     bind_rows()
+
+jaccard_matrix <- results_jaccard %>%
+    mutate(feature_1 = paste(status, feature_1, sep='+'),
+        name = paste(status, name, sep='+')) %>%
+    filter(resource == 'DE') %>%
+    select(feature_1,name,value) %>%
+    pivot_wider(names_from=name, values_from=value, values_fn = mean) %>%
+    column_to_rownames('feature_1') %>% as.matrix()
+
+Heatmap(jaccard_matrix, cluster_rows = FALSE, cluster_columns = FALSE)
+
+
+
+
 
 plotter <- function(results_df, category) {
     if(grepl("Rand", category)){
@@ -281,133 +577,168 @@ plotter <- function(results_df, category) {
         )
     }
 }
+sub_jac <- results_jaccard %>% filter(main_dataset == 'GSE186341', statparam == 'stat')
+plotter(sub_jac, 'Jaccard Index')
+merged_plotter <- function(results_df, category) {
+    datasets <- results_df %>% distinct(main_dataset) %>% pull()
+    resources <- results_df %>%
+        distinct(resource) %>%
+        pull()
 
+    plots_list <- list()
+    for (resource in resources) {
+        toplot <- results_df %>%
+            dplyr::filter(resource == !!resource) %>%
+            mutate(id_2 = paste0(status, " - ", id))
 
-# rank_plotter <- function(results_df, category){
-#     plots_list <- list()
-#     datasets <- c("GTex", "CCLE", "GSE186341")
-#     for(dataset in datasets){
-#         toplot <- results_df %>%
-#             dplyr::filter(main_dataset == !!dataset) %>%
-#             mutate(id_2 = paste0(status, " - ", id),
-#                     resource = case_when(grepl("msigdb_hallmarks", name) ~ "MSigDB Hallmarks",
-#                                         grepl("dorothea", name) ~ "DoRothEA",
-#                                         grepl("progeny", name) ~ "PROGENy")) 
+        id_order <- toplot %>%
+            group_by(id_2) %>%
+            summarise(mean_score = mean(value, na.rm = TRUE)) %>%
+            arrange(., mean_score) %>%
+            mutate(id_2 = as_factor(id_2))
 
-#         id_order <- toplot %>%
-#             group_by(id_2) %>%
-#             summarise(mean_score = mean(value, na.rm = TRUE)) %>%
-#             arrange(.,mean_score) %>%
-#             mutate(id_2 = as_factor(id_2))
+        sorted_data <- toplot %>%
+            arrange(., factor(id_2, levels = id_order$id_2)) %>%
+            mutate(
+                id_2 = as_factor(id_2),
+                category = !!category
+            )
+
+        id_heatmap_data <- id_order %>%
+            separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
+            # separate(id_2, into = c("is_filtered", "pipelines"), sep = " - ", remove = FALSE) %>%
+            # separate(pipelines, into = c("pipeline_a", "pipeline_b"), sep = "-", remove = TRUE) %>%
+            separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
+            separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
+            dplyr::select(-mean_score) %>%
+            pivot_longer(cols = -c(id_2)) %>%
+            mutate(
+                category = case_when(
+                    grepl("filtered", name) ~ "Filtering",
+                    grepl("norm", name) ~ "Normalization",
+                    grepl("diffexp", name) ~ "DE"
+                ),
+                method = value,
+                val = 1,
+                pipeline_num = case_when(
+                    grepl("norm_method__a", name) ~ "Pipeline 1",
+                    grepl("norm_method__b", name) ~ "Pipeline 2",
+                    grepl("diffexp_method__a", name) ~ "Pipeline 1",
+                    grepl("diffexp_method__b", name) ~ "Pipeline 2",
+                    grepl("is_filtered", name) ~ value
+                )
+            ) %>%
+            mutate(category = fct_relevel(category, c("Filtering", "Normalization", "DE")))
+        hm_plot <- id_heatmap_data %>%
+            ggplot(aes(y = id_2, x = method, fill = as_factor(pipeline_num), alpha = 0.5)) +
+            geom_tile() +
+            scale_fill_manual(values = c(
+                "Filtered" = "purple",
+                "Unfiltered" = "orange",
+                "Pipeline 1" = "#439425",
+                "Pipeline 2" = "darkred"
+            )) +
+            guides(x = guide_axis(angle = 60)) +
+            facet_grid(cols = vars(category), scales = "free", space = "free",
+                labeller = as_labeller(c(
+                    `Filtering` = "F",
+                    `Normalization` = "N",
+                    `DE` = "DE"))) +
+            theme_cowplot() +
+            theme(
+                legend.position = "none",
+                axis.title = element_blank()
+            )
+
+        x_min <- ifelse(grepl("Rank", category), -1, 0)
+
+    
+        box_plot <- ggplot(sorted_data) +
+            annotate(geom = "rect", xmin = 0.8, xmax = 1, ymin = -Inf, ymax = Inf,
+                fill = "#439425", colour = NA, alpha = 0.2) +
+            annotate(geom = "rect", xmin = 0.5, xmax = 0.8, ymin = -Inf, ymax = Inf,
+                fill = "#b7ba2e", colour = NA, alpha = 0.2) +
+            annotate(geom = "rect", xmin = x_min, xmax = 0.5, ymin = -Inf, ymax = Inf,
+                fill = "#d04a35", colour = NA, alpha = 0.2) +
+            {if (category == "Rank correlation") list(
+                geom_boxplot(aes(y = id_2, x = value)),
+                geom_violin(aes(y = id_2, x = value)))
+            } +
+            {if (category == "Rand Index") list(
+                geom_point(aes(y = id_2, x = value, shape = factor(k))),
+                labs(shape = "K"))
+            } +
+            {if (category == "Jaccard Index") list(
+                geom_boxplot(aes(y = id_2, x = value)))
+            } +
+            xlim(c(x_min, 1)) +
+            facet_grid(cols = vars(category), rows = vars(resource), scales = "free", space = "free",
+                labeller = as_labeller(c(
+                    `dorothea` = "DoRothEA",
+                    `msigdb_hallmarks` = "MSigDB Hallmarks",
+                    `progeny` = "PROGENy",
+                    `Rank correlation`= "Rank correlation",
+                    `Rand Index`= "Rand Index",
+                    `DE` = "DE",
+                    `random` = 'Random DoRothEA',
+                    `Jaccard Index`= "Jaccard Index",
+                    `DE progeny` = "DE PROGENy",
+                    `DE msigdb_hallmarks` = "DE MSigDB Hallmarks",
+                    `DE dorothea` = "DE DoRothEA",
+                    `DE TFs` = 'DE TFs'))) +
+            theme_cowplot() +
+            theme(
+                axis.text.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                axis.title = element_blank(),
+                axis.line.y = element_blank(), 
+            )
+
+        p1 <- cowplot::plot_grid(hm_plot, box_plot, nrow = 1, rel_widths = c(0.7, 1), align = "h")
+        plots_list[[resource]] <- p1
+    }
+        ncol = ifelse(length(plots_list) > 3, 2, 1)
         
-#         sorted_data <- toplot %>%
-#             arrange(., factor(id_2, levels = id_order$id_2)) %>%
-#             mutate(id_2 = as_factor(id_2),
-#             category = !!category)
-        
-#         id_heatmap_data <- id_order %>%
-#             separate(id_2, into = c("is_filtered", "pipeline_a", "pipeline_b"), sep = " - ", remove = FALSE) %>%
-#             separate(pipeline_a, into = c("norm_method__a", "diffexp_method__a"), sep = "\\+") %>%
-#             separate(pipeline_b, into = c("norm_method__b", "diffexp_method__b"), sep = "\\+") %>%
-#             dplyr::select(-mean_score) %>%
-#             pivot_longer(cols = -c(id_2)) %>%
-#             mutate(category = case_when(grepl("filtered", name) ~ "Filtering",
-#                                         grepl("norm", name) ~ "Normalization",
-#                                         grepl("diffexp", name) ~ "DE"),
-#                     method = value,
-#                     val = 1,
-#                     pipeline_num = case_when(grepl("norm_method__a", name) ~ "Pipeline 1",
-#                                             grepl("norm_method__b", name) ~ "Pipeline 2",
-#                                             grepl("diffexp_method__a", name) ~ "Pipeline 1",
-#                                             grepl("diffexp_method__b", name) ~ "Pipeline 2",
-#                                             grepl("is_filtered", name) ~ value
-#                                             )
-#             ) %>%
-#             mutate(category = fct_relevel(category, c("Filtering", "Normalization", "DE")))
-#         hm_plot <- id_heatmap_data %>%
-#             ggplot(aes(y = id_2, x = method, fill = as_factor(pipeline_num), alpha=0.5)) +
-#             geom_tile() +
-#                 scale_fill_manual(values = c(
-#                     "filtered" = "purple",
-#                     "unfiltered" = "orange",
-#                     "Pipeline 1" = "#439425",
-#                     "Pipeline 2" = "darkred"
-#                 )) +
-#             guides(x = guide_axis(angle = 60)) +
-#             facet_grid(cols = vars(category), scales = "free", space = "free",
-#                     labeller = as_labeller(c(
-#                         `Filtering` = "F",
-#                         `Normalization` = "N",
-#                         `DE` = "DE"))) +
-#             theme_cowplot() +
-#             theme(legend.position = "none",
-#                 axis.title = element_blank()
-#             )
-        
-#         x_min <- ifelse(grepl("Rank",category), -1, 0)
-        
-#         box_plot <- ggplot(sorted_data) + 
-#             annotate(geom = "rect", xmin = 0.8, xmax = 1, ymin = -Inf, ymax = Inf,
-#                fill = "#439425", colour = NA, alpha = 0.2) +
-#             annotate(geom = "rect", xmin = 0.5, xmax = 0.8, ymin = -Inf, ymax = Inf,
-#                fill = "#b7ba2e", colour = NA, alpha = 0.2) +
-#             annotate(geom = "rect", xmin = -1, xmax = 0.5, ymin = -Inf, ymax = Inf,
-#                fill = "#d04a35", colour = NA, alpha = 0.2) +
-#             geom_boxplot(aes(y = id_2, x = value)) +
-#             geom_violin(aes(y = id_2, x = value)) +
-#             xlim(c(x_min,1)) +
-#             facet_grid(cols = vars(category), scales = "free", space = "free",
-#             labeller = as_labeller(c(
-#                 `dorothea` = "DoRothEA",
-#                 `msigdb_hallmarks` = "MSigDB Hallmarks",
-#                 `progeny` = "PROGENy",
-#                 `Rank correlation` = "Rank correlation"))) +
-#             theme_cowplot() +
-#             theme(
-#                 axis.text.y = element_blank(),
-#                 axis.ticks.y = element_blank(),
-#                 axis.title = element_blank(),
-#                 axis.line.y = element_blank()
-#                 )
+        nrow = ceiling(length(plots_list)/ncol)
 
-#         p1 <- cowplot::plot_grid(hm_plot, box_plot, nrow = 1, rel_widths = c(0.7, 1), align = "h")
-#         plots_list[[dataset]] <- p1
-#     }
-#     aligned_plots <- egg::ggarrange(
-#             plots = plots_list,
-#             nrow = 3
-#             )
+        aligned_plots <- egg::ggarrange(
+            plots = plots_list,
+            nrow = nrow,
+            ncol = ncol
+        )
 
-#     merged_plot <- ggdraw() + draw_plot(aligned_plots, 0, 0, 1, 1) +
-#         draw_plot_label("A", 0, 1) +
-#         draw_plot_label("B", 0, 0.667) +
-#         draw_plot_label("C", 0, 0.333)
+        merged_plot <- ggdraw() + draw_plot(aligned_plots, 0, 0, 1, 1)
 
-#     merged_filename <- "rank_plot"
+        merged_filename <- paste0('merged', "__", category)
 
-#     save_plot(
-#         filename = paste0("../flop_results/plots/", merged_filename, ".png"),
-#         plot = merged_plot,
-#         device = "png",
-#         dpi = 300,
-#         base_height = 20,
-#         base_width = 16
-#     )
+        save_plot(
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".png"),
+            plot = merged_plot,
+            device = "png",
+            dpi = 300,
+            base_height = 6*nrow,
+            base_width = 13*ncol
+        )
 
-#     save_plot(
-#         filename = paste0("../flop_results/plots/", merged_filename, ".svg"),
-#         plot = merged_plot,
-#         device = "svg",
-#         dpi = 300,
-#         base_height = 20,
-#         base_width = 16
-#     )
-# }
+        save_plot(
+            filename = paste0("./flop_results/paper_plots/", merged_filename, ".svg"),
+            plot = merged_plot,
+            device = "svg",
+            dpi = 300,
+            base_height = 6*nrow,
+            base_width = 13*ncol
+        )
+    
+}
 
-# rank_plotter(results_rank, "Rank correlation")
+merged_plotter(results_rank, "Rank correlation")
+merged_plotter(results_jaccard, "Jaccard Index")
+
+
+
 
 plotter(results_rank, "Rank correlation")
-plotter(results_randindex, "Rand Index")
+# plotter(results_randindex, "Rand Index")
 plotter(results_jaccard, "Jaccard Index")
 
 randindex_plotter <- function(results_df, category) {
@@ -989,7 +1320,7 @@ rank_dataset_sina_plot <- results_rank %>%
     # scale_y_continuous(limits = c(0,1)) +
     theme(axis.title = element_blank(),
         legend.title = element_blank(),
-        axis.text = element_text(size = 20),
+        axis.text = element_text(size = 20, angle = 60, hjust = 1),
         legend.position = 'none',
         plot.margin = unit(c(1,1,1,1), "cm"))
 
@@ -1058,7 +1389,8 @@ upset_jaccard <- results_jaccard %>%
     mutate(resource = case_when(
             grepl("dorothea", resource) ~ "DoRothEA",
             grepl("msigdb_hallmarks", resource) ~ "MSigDB",
-            grepl("progeny", resource) ~ "PROGENy")
+            grepl("progeny", resource) ~ "PROGENy",
+            TRUE ~ resource)
         ) %>%
     summarise(meanval = mean(value), stdev = sd(value)) %>%
     group_by(main_dataset, resource) %>%
@@ -1072,7 +1404,6 @@ upset_jaccard <- results_jaccard %>%
 
 resources <- upset_jaccard %>% ungroup() %>% select(-id, -main_dataset) %>% colnames()
 plots_list <- list()
-datasets <- c('CCLE', 'GSE186341', 'GTex')
 for(dataset in datasets){
     upset_jaccard_test <- upset_jaccard %>%
         filter(main_dataset==!!dataset) %>%
@@ -1081,9 +1412,9 @@ for(dataset in datasets){
         column_to_rownames('id')
     plots_list[[dataset]] <- upset(upset_jaccard_test, intersect = resources,
         intersections = list(c("DoRothEA", "MSigDB"),
+                                    c("DoRothEA", "MSigDB", "PROGENy"),
                                     c("MSigDB", "PROGENy"),
-                                    c("DoRothEA", "PROGENy"),
-                                    c("DoRothEA", "MSigDB", "PROGENy")),
+                                    c("DoRothEA", "PROGENy")),
         base_annotations=list('Intersection size'=intersection_size(counts=TRUE, text = list(size=7, nudge_y = 0.7, color = 'black')) + ylim(0, 5) + ylab(dataset)),
         name = "resource",
         set_sizes=FALSE,
@@ -1112,7 +1443,9 @@ plots_list[['inters']] <- upset(upset_jaccard_test, intersect = resources,
             )))
         )[[2]]
 
-upset_plots <- egg::ggarrange(plots_list$CCLE, plots_list$GSE186341, plots_list$GTex, plots_list$inters, nrow = 4)
+
+
+upset_plots <- egg::ggarrange(plots = plots_list, nrow = 8, ncol = 1)
 
 summarised_results_jaccard <- results_jaccard %>%
     group_by(feature_1, name, status) %>%
