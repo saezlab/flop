@@ -13,9 +13,9 @@ func_datafile <- args[grep("--func_file", args) + 1]
 de_datafile <- args[grep("--de_file", args) + 1]
 dataset_id <- args[grep("--dataset",args)+1]
 
-
-# func_datafile <- "./data/flop_results/funcomics/fullmerged/Spurell19__fullmerge.tsv"
-# de_datafile <- "./data/flop_results/diffexp/Spurell19__deresults.tsv"
+# path_file <- './scripts/'
+# func_datafile <- "./test__fullmerge.tsv"
+# de_datafile <- "./test__deresults.tsv"
 
 func_merged_data <- read_tsv(func_datafile)
 func_cor_results <- corr_analysis(func_merged_data)
@@ -33,11 +33,11 @@ de_cor_results <- tibble()
 for(bio_context in bio_contexts){
   de_subset <- de_merged_data %>%
           select(ID, contains(bio_context), -contains('padj')) %>%
-          pivot_longer(-ID, names_to = "runID", values_to = "scores") %>%
+          pivot_longer(-ID, names_to = "runID", values_to = "act") %>%
           separate(runID, into = c("statparam", "status", "pipeline", "bio_context", "main_dataset", "subset"), sep = "__")  %>%
           mutate(resource = 'DE') %>% 
           dplyr::rename('items' = 'ID') %>%
-    filter(!is.na(scores))
+    filter(!is.na(act))
   de_subset_cor_results <- corr_analysis(de_subset)
   de_cor_results <- bind_rows(de_cor_results, de_subset_cor_results)
 }

@@ -8,15 +8,19 @@
 #' @examples
 #' jaccard_calc(data, pipelines)
 jaccard_calc <- function(data, pipelines) {
-    item_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
-    row.names(item_mat) <- pipelines
-    colnames(item_mat) <- pipelines
+    jaccard_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
+    agreement_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
+    row.names(jaccard_mat) <- pipelines
+    colnames(jaccard_mat) <- pipelines
+    row.names(agreement_mat) <- pipelines
+    colnames(agreement_mat) <- pipelines
     for (pipeline1 in pipelines) {
         for (pipeline2 in pipelines) {
-            item_mat[pipeline1, pipeline2] <- bayesbio::jaccardSets(data[[pipeline1]], data[[pipeline2]])
+            jaccard_mat[pipeline1, pipeline2] <- bayesbio::jaccardSets(data[[pipeline1]], data[[pipeline2]])
+            agreement_mat[pipeline1, pipeline2] <- length(intersect(data[[pipeline1]], data[[pipeline2]]))/length(c(data[[pipeline1]],data[[pipeline2]]))
         }
     }
-    return(item_mat)
+    return(list(jaccard_mat, agreement_mat))
 }
 
 #' @title Jaccard analysis
@@ -39,10 +43,10 @@ jaccard_analysis <- function(merged_data) {
                 arrange() %>%
                 pull()
             to_analyse <- x %>%
-                select(status_pipeline, scores, items) %>%
+                select(status_pipeline, act, items) %>%
                 pivot_wider(
                     names_from = status_pipeline,
-                    values_from = scores,
+                    values_from = act,
                     values_fn = {
                         mean
                     }
@@ -74,22 +78,51 @@ jaccard_analysis <- function(merged_data) {
                     filter(status_pipeline == !!pipeline) %>%
                     slice_min(scores, n = n_extr) %>%
                     pull(items)
-                extreme_items <- c(max_items, min_items)
-                item_collector[[pipeline]] <- extreme_items
+                # extreme_items <- c(max_items, min_items)
+                item_collector[['max']][[pipeline]] <- max_items
+                item_collector[['min']][[pipeline]] <- min_items
+            }
+            
+            jaccard_results <- tibble()
+            agreement_results <- tibble()
+            extremes <- c('max', 'min')
+            for(extreme in extremes){
+                jaccard_results_sub <- jaccard_calc(item_collector[[extreme]], pipelines) %>%
+                    .[[1]] %>%
+                    as.data.frame() %>%
+                    rownames_to_column(var = "feature_1") %>%
+                    pivot_longer(-feature_1) %>%
+                    mutate(
+                        statparam = unique(x$statparam),
+                        bio_context = unique(x$bio_context),
+                        resource = unique(x$resource),
+                        main_dataset = unique(x$main_dataset),
+                        type = 'jaccard',
+                        extreme = !!extreme
+                    )
+
+                agreement_results_sub <- jaccard_calc(item_collector[[extreme]], pipelines) %>%
+                    .[[2]] %>%
+                    as.data.frame() %>%
+                    rownames_to_column(var = "feature_1") %>%
+                    pivot_longer(-feature_1) %>%
+                    mutate(
+                        statparam = unique(x$statparam),
+                        bio_context = unique(x$bio_context),
+                        resource = unique(x$resource),
+                        main_dataset = unique(x$main_dataset),
+                        type = 'agreement',
+                        extreme = !!extreme
+                    )
+
+                jaccard_results <- bind_rows(jaccard_results, jaccard_results_sub)
+                agreement_results <- bind_rows(agreement_results, agreement_results_sub)
             }
 
-            jaccard_results <- jaccard_calc(item_collector, pipelines) %>%
-                as.data.frame() %>%
-                rownames_to_column(var = "feature_1") %>%
-                pivot_longer(-feature_1) %>%
-                mutate(
-                    statparam = unique(x$statparam),
-                    bio_context = unique(x$bio_context),
-                    resource = unique(x$resource),
-                    main_dataset = unique(x$main_dataset)
-                )
+            
+            results_df <- bind_rows(jaccard_results, agreement_results)
 
-            return(jaccard_results)
+            return(results_df)
         }) %>%
         bind_rows() %>%
         subset(feature_1 != name) %>%
@@ -107,7 +140,10 @@ jaccard_analysis <- function(merged_data) {
             bio_context,
             resource,
             main_dataset,
+            type,
+            extreme,
             .keep_all = TRUE
         )
     return(jaccard_results)
 }
+

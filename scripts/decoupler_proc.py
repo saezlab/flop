@@ -36,9 +36,19 @@ else:
 #     output_file = input_file.replace('__decouplerinput.tsv', '__{}__{}__decoupleroutput.tsv'.format(suffixes[i], resource))
 #     dc_output.to_csv(output_file, sep='\t')
 
-selected_results = dc_result[0]
-newtags = [name + '__' + 'mean' for name in selected_results.index.values]
-selected_results.index = newtags
-dc_output = selected_results
+act_scores, pvalues = dc_result
+
+indexes = pvalues.index.values
+adj_pvalues = pd.DataFrame(index=indexes, columns=pvalues.columns.values)
+
+for i in indexes:
+    adj_pvalues.loc[i] = dc.p_adjust_fdr(pvalues.loc[i].values)
+
+act_scores_newtags = [name + '__' + 'ulm' + '__' + 'act' for name in act_scores.index.values]
+pval_newtags = [name + '__' + 'ulm' + '__' + 'padj' for name in adj_pvalues.index.values]
+act_scores.index = act_scores_newtags
+adj_pvalues.index = pval_newtags
+dc_output = pd.concat([act_scores, adj_pvalues], axis=0)
+
 output_file = input_file.replace('__decouplerinput.tsv', '__{}__{}__decoupleroutput.tsv'.format('mean', resource))
 dc_output.to_csv(output_file, sep='\t')

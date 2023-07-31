@@ -319,8 +319,8 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
-        .set {randindex}
+    // rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
+    //     .set {randindex}
 
     jaccard_analysis(params.scripts_dir, full_results)
         .set {jaccard}

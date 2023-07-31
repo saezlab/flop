@@ -44,10 +44,14 @@ for(statparam in statparams){
             str_subset(.,pattern=paste(bio_context,"__", statparam,"__", dcmethod, "__", resource, "__decoupleroutput.tsv", sep=""))
         for(file in file_list) {
           file_data <- read_tsv(file, show_col_types=FALSE) %>%
-              separate(...1, into=c("bio_context","status", "norm", "diffexp", "dcmethod"), sep="__", remove=FALSE) %>%
+              separate(...1, into=c("bio_context","status", "norm", "diffexp", "dcmethod", 'metric'), sep="__", remove=FALSE) %>%
               dplyr::rename(obs_id = `...1`) %>%
-              pivot_longer(cols=c(7:ncol(.)), names_to = "items", values_to = "scores") %>%
-              mutate(statparam=!!statparam, resource=!!resource, pipeline=paste(norm, diffexp, sep = "+"))
+              pivot_longer(cols=c(8:ncol(.)), names_to = "items", values_to = "scores") %>%
+              select(-obs_id) %>%
+              pivot_wider(names_from = metric, values_from = scores) %>%
+              mutate(statparam=!!statparam, resource=!!resource, pipeline=paste(norm, diffexp, sep = "+"),
+              obs_id = paste(bio_context,status, norm, diffexp, dcmethod, sep = "__")) %>%
+              relocate(obs_id)
           merged_data <- rbind(merged_data, file_data)
         }
       }
@@ -57,3 +61,4 @@ for(statparam in statparams){
 
 filename <- paste(dataset_id, status, "result.tsv", sep = "__")
 write_tsv(merged_data, filename)
+

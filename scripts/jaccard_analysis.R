@@ -29,11 +29,11 @@ de_jaccard_results <- tibble()
 for(bio_context in bio_contexts){
   de_subset <- de_merged_data %>%
           select(ID, contains(bio_context), -contains('padj')) %>%
-          pivot_longer(-ID, names_to = "runID", values_to = "scores") %>%
+          pivot_longer(-ID, names_to = "runID", values_to = "act") %>%
           separate(runID, into = c("statparam", "status", "pipeline", "bio_context", "main_dataset", "subset"), sep = "__")  %>% 
           mutate(resource = 'DE') %>% 
           dplyr::rename('items' = 'ID') %>%
-    filter(!is.na(scores))
+    filter(!is.na(act))
   de_subset_jaccard_results <- jaccard_analysis(de_subset)
   de_jaccard_results <- bind_rows(de_jaccard_results, de_subset_jaccard_results)
 }

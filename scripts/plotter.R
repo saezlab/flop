@@ -214,16 +214,26 @@ heatmap_plotter <- function(data, facet, datasets, resource){
 
     heatmap_grob <- grid::grid.grabExpr(draw(heatmap))
 
+    ggsave(plot = heatmap_grob, filename = paste("./flop_results/paper_plots/heatmap", paste(datasets, collapse = '-'),resource, facet, ".svg", sep = '__'), width = 16, height = 16, units = 'cm', dpi = 300)
     ggsave(plot = heatmap_grob, filename = paste("./flop_results/paper_plots/heatmap", paste(datasets, collapse = '-'),resource, facet, ".png", sep = '__'), width = 16, height = 16, units = 'cm', dpi = 300)
 }
+resources <- c('DE', 'DoRothEA', 'MSigDB_Hallmarks', 'PROGENy')
 
+for(resource in resources){
+    datasets <- c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')
+    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', datasets, resource)
+    heatmap_plotter(results_jaccard, 'Jaccard index', datasets, resource)
 
-datasets <- c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')
-heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', datasets, 'MSigDB_Hallmarks')
-heatmap_plotter(results_jaccard, 'Jaccard index', datasets, 'MSigDB_Hallmarks')
+    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', resource)
+    heatmap_plotter(results_jaccard, 'Jaccard index', 'GSE186341', resource)
 
-heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', 'MSigDB_Hallmarks')
-heatmap_plotter(results_jaccard, 'Jaccard index', 'GSE186341', 'MSigDB_Hallmarks')
+    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'CCLE', resource)
+    heatmap_plotter(results_jaccard, 'Jaccard index', 'CCLE', resource)
+}
+
+heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'Sweet18', resource)
+heatmap_plotter(results_jaccard, 'Jaccard index', 'Sweet18', resource)
+
 
 legend_grob <- grid::grid.grabExpr(draw(lgd))
 legend_anno_grob <- grid::grid.grabExpr(draw(lgd_anno))

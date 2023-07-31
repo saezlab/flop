@@ -44,7 +44,9 @@ error_func () {
 
 testdata_downloader () {
   curl -C - -O https://filedn.eu/ld7S7VEWtgOf5uN0V7fbp84/test_data.zip
-  unzip -n test_data.zip -d ./test_data
+  mkdir ./test_data/
+  mkdir ./test_data/test/
+  unzip -n test_data.zip -d ./test_data/test/ 
 }
 
 while getopts 'd:e:r:k:b:f:ht' OPTION; do
@@ -68,7 +70,7 @@ while getopts 'd:e:r:k:b:f:ht' OPTION; do
       perturbation_array="test"
       k_val=3
       k_type="range"
-      n_thresh=50
+      n_thresh=30
       echo "##TEST MODE##"
       ;;
     k)

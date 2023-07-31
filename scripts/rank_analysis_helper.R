@@ -17,10 +17,10 @@ corr_analysis <- function(merged_data) {
     group_split() %>% 
     purrr::map(., function(x) {
       to_cor <- x %>%
-        select(status_pipeline, scores, items) %>%
+        select(status_pipeline, act, items) %>%
         pivot_wider(
           names_from = status_pipeline,
-          values_from = scores,
+          values_from = act,
           values_fn = {mean}
         ) %>%
         column_to_rownames(var = "items") %>%
@@ -66,7 +66,6 @@ corr_analysis <- function(merged_data) {
 
     }) %>%
     bind_rows() %>%
-    subset(feature_1 != name) %>%
     rowwise() %>%
     mutate(
       id = paste0(
