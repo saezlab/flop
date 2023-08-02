@@ -13,7 +13,7 @@
 corr_analysis <- function(merged_data) {
   cor_results <- merged_data %>%
     mutate(status_pipeline = paste0(status, "-", pipeline)) %>%
-    group_by(statparam, resource, bio_context, main_dataset) %>%
+    group_by(statparam, resource, bio_context, main_dataset, subset) %>%
     group_split() %>% 
     purrr::map(., function(x) {
       to_cor <- x %>%
@@ -45,7 +45,8 @@ corr_analysis <- function(merged_data) {
           statparam = unique(x$statparam),
           bio_context = unique(x$bio_context),
           resource = unique(x$resource),
-          main_dataset = unique(x$main_dataset)
+          main_dataset = unique(x$main_dataset),
+          subset = unique(x$subset)
         )
 
       cor_results <- cor_results_mat %>%
@@ -57,7 +58,8 @@ corr_analysis <- function(merged_data) {
           statparam = unique(x$statparam),
           bio_context = unique(x$bio_context),
           resource = unique(x$resource),
-          main_dataset = unique(x$main_dataset)
+          main_dataset = unique(x$main_dataset),
+          subset = unique(x$subset)
         )
       
       full_df <- bind_rows(mat_crossprod_df, cor_results)
@@ -81,6 +83,7 @@ corr_analysis <- function(merged_data) {
       bio_context,
       resource,
       main_dataset,
+      subset,
       .keep_all = TRUE)
   return(cor_results)
 }

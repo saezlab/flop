@@ -5,6 +5,7 @@ params.perturbation = "NA"
 params.k_val = 10
 params.k_type = "range"
 params.ngenes_threshold = 0
+params.pval_threshold = 1
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -215,6 +216,7 @@ process jaccard_analysis{
     input:
     path scripts_dir
     tuple val(datasetID), path (func_results), path (de_results)
+    val(pval_thresh)
 
     output:
     tuple val(datasetID), path ("*__jaccard.tsv")
@@ -222,7 +224,7 @@ process jaccard_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results}
+    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results} --pval_thresh ${pval_thresh}
     """
 }
 
@@ -322,7 +324,7 @@ workflow {
     // rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
     //     .set {randindex}
 
-    jaccard_analysis(params.scripts_dir, full_results)
+    jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
         .set {jaccard}
 
 }

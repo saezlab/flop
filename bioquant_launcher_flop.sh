@@ -13,6 +13,6 @@ source ${HOME}/.bashrc
 conda activate flop
 
 # Executing an R script
-bash /net/data.isilon/ag-saez/bq_vpaton/flop/flop_launcher.sh -d /net/data.isilon/ag-saez/bq_vpaton/flop/data/data_ccle/ -e cluster -f 30
+bash /net/data.isilon/ag-saez/bq_vpaton/flop/flop_launcher.sh -d /net/data.isilon/ag-saez/bq_vpaton/flop/data/data_ccle/ -e cluster -f 30 -p 0.05
 
 echo "FINISHED JOB"

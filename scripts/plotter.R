@@ -220,15 +220,19 @@ heatmap_plotter <- function(data, facet, datasets, resource){
 resources <- c('DE', 'DoRothEA', 'MSigDB_Hallmarks', 'PROGENy')
 
 for(resource in resources){
-    datasets <- c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')
-    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', datasets, resource)
-    heatmap_plotter(results_jaccard, 'Jaccard index', datasets, resource)
+    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'reheat', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index, max', 'reheat', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'max'), 'Similarity score, max', 'reheat', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'min'), 'Similarity score, min', 'reheat', resource)
 
     heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', resource)
-    heatmap_plotter(results_jaccard, 'Jaccard index', 'GSE186341', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'GSE186341', resource)
 
     heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'CCLE', resource)
-    heatmap_plotter(results_jaccard, 'Jaccard index', 'CCLE', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'CCLE', resource)
+
+    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'CCLE', resource)
+    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'CCLE', resource)
 }
 
 heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'Sweet18', resource)
