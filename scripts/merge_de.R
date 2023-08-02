@@ -12,20 +12,21 @@ out_table <- qread(pipeline_files[1]) %>%
   select(ID)
 
 #read files and write output
+failing_thresh <- c()
 for(filename in pipeline_files){
   proc_data <- qread(filename)
   selected_data <- proc_data %>% select(ID, !!param_id)
   num_selected_genes <- proc_data %>% filter(padj < 0.05) %>% nrow()
   if(num_selected_genes < threshold){
-    next
+    failing_thresh <- c(failing_thresh, filename)
   }
   iter_name <- sub('__de.qs', '', filename) %>% sub(pattern = paste0(dataset_id, "__"), replacement = "", .)
   out_table <- full_join(out_table, selected_data, by='ID') %>% 
     rename(!!iter_name := !!param_id)
 }
 output_filename <- paste(dataset_id, biocontext, param_id, 'decouplerinput.tsv', sep='__')
-n_pipelines <- out_table %>% select(-ID) %>% ncol()
-if(n_pipelines == length(pipeline_files)){
+
+if(length(failing_thresh) < 6){
   write.table(out_table, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 }
 

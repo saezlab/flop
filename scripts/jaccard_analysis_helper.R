@@ -16,9 +16,40 @@ jaccard_calc <- function(data, pipelines) {
     colnames(agreement_mat) <- pipelines
     for (pipeline1 in pipelines) {
         for (pipeline2 in pipelines) {
-            min_n_items <- min(length(data[[pipeline1]]), length(data[[pipeline2]]))
-            jaccard_mat[pipeline1, pipeline2] <- bayesbio::jaccardSets(data[[pipeline1]][1:min_n_items], data[[pipeline2]][1:min_n_items])
-            agreement_mat[pipeline1, pipeline2] <- length(intersect(data[[pipeline1]], data[[pipeline2]]))*2/length(c(data[[pipeline1]][1:min_n_items],data[[pipeline2]][1:min_n_items]))
+            n_items <- data %>%
+                filter(status_pipeline %in% c(pipeline1, pipeline2)) %>% 
+                group_by(status_pipeline, extreme) %>%
+                summarise(n_items = n())
+            
+            n_items_df <- n_items %>% group_by(extreme) %>% summarise(n_items = min(n_items))
+
+            data_df <- data %>% filter(status_pipeline %in% c(pipeline1, pipeline2)) %>% 
+                mutate(extreme = factor(extreme, levels = c('top', 'bottom'))) %>%
+                group_by(status_pipeline, extreme) %>% arrange(padj, .by_group = TRUE) %>% #ungroup() %>% ggplot(., aes(x=act, y=padj)) + geom_point()
+                group_split() %>%
+                purrr::map(., function(x){
+                    extreme <- x %>% pull(extreme) %>% unique()
+                    n_item <- n_items_df %>% filter(extreme == !!extreme) %>% pull(n_items)
+                    pipeline <- x %>% pull(status_pipeline) %>% unique()
+                    subsetted_items <- x %>% slice_head(n=n_item) %>% mutate(extreme = as.character(extreme))
+                    if(extreme == 'bottom'){
+                        subsetted_items <- subsetted_items %>% arrange(desc(act))
+                    }
+                    return(subsetted_items)
+                }) %>% bind_rows() 
+            
+            if(nrow(data_df) == 0){
+                jaccard_mat[pipeline1, pipeline2] <- NA
+                agreement_mat[pipeline1, pipeline2] <- NA
+                next
+            }
+
+            data_list <- list()
+            data_list[[pipeline1]] <- data_df %>% filter(status_pipeline == pipeline1) %>% pull(items)
+            data_list[[pipeline2]] <- data_df %>% filter(status_pipeline == pipeline2) %>% pull(items)
+
+            jaccard_mat[pipeline1, pipeline2] <- bayesbio::jaccardSets(data_list[[pipeline1]], data_list[[pipeline2]])
+            agreement_mat[pipeline1, pipeline2] <- length(intersect(data_list[[pipeline1]], data_list[[pipeline2]]))*2/length(c(data_list[[pipeline1]],data_list[[pipeline2]]))
         }
     }
     return(list(jaccard_mat, agreement_mat))
@@ -34,9 +65,9 @@ jaccard_calc <- function(data, pipelines) {
 #' jaccard_analysis(merged_data)
 jaccard_analysis <- function(merged_data, p_cutoff = 1) {
     merged_data <- merged_data %>%
-        mutate(status_pipeline = paste0(status, "-", pipeline))
-    jaccard_results <- merged_data %>%
-        group_by(statparam, resource, bio_context, main_dataset, subset) %>%
+        mutate(status_pipeline = paste0(status, "-", pipeline)) # %>% filter(bio_context == 'ASPC_KW2449_v_ASPC_DMSO', statparam == 'logFC', resource == 'msigdb_hallmarks')
+    jaccard_results <- merged_data %>% 
+        group_by(statparam, resource, bio_context, main_dataset, subset) %>% 
         group_split() %>%
         purrr::map(., function(x) {
             pipelines <- x %>%
@@ -67,26 +98,27 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
             } else if (grepl("msigdb_hallmarks", resource)) {
                 n_extr <- 5
             } else {
-                n_extr <- round(length(x$items)*0.05)
+                n_extr <- round(length(unique(x$items))*0.05)
             }
             item_collector <- list()
             n_items <- tibble()
+            extreme_items <- tibble()
             for (pipeline in pipelines) {
                 max_items <- to_analyse %>%
                     filter(status_pipeline == !!pipeline) %>%
                     slice_max(act, n = n_extr) %>%
                     filter(padj < !!p_cutoff) %>%
-                    pull(items)
+                    mutate(extreme = 'top')
                 min_items <- to_analyse %>%
                     filter(status_pipeline == !!pipeline) %>%
                     slice_min(act, n = n_extr) %>%
-                    filter(padj < !!p_cutoff) %>%
-                    pull(items)
-                extreme_items <- c(max_items, min_items)
+                    filter(padj < !!p_cutoff)  %>%
+                    mutate(extreme = 'bottom')
+                extreme_items_sub <- rbind(max_items, min_items)
+                extreme_items <- rbind(extreme_items, extreme_items_sub)
                 # item_collector[['max']][[pipeline]] <- max_items
                 # item_collector[['min']][[pipeline]] <- min_items
-                item_collector[[pipeline]] <- extreme_items
-                sub_n_items <- tibble(pipeline = pipeline, n_extr = length(extreme_items))
+                sub_n_items <- tibble(pipeline = pipeline, n_extr = nrow(extreme_items_sub))
                 n_items <- bind_rows(n_items, sub_n_items)
             }
 
@@ -104,7 +136,8 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
             agreement_results <- tibble()
             # extremes <- c('max', 'min')
             # for(extreme in extremes){
-                jaccard_results_sub <- jaccard_calc(item_collector, pipelines) %>% #item_collector[[extreme]]
+                module_results <- jaccard_calc(extreme_items, pipelines)
+                jaccard_results_sub <- module_results %>% #item_collector[[extreme]]
                     .[[1]] %>%
                     as.data.frame() %>%
                     rownames_to_column(var = "feature_1") %>%
@@ -119,7 +152,7 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
                         type = 'jaccard'
                     ) %>% left_join(n_items_df, by = c('feature_1', 'name'))
 
-                agreement_results_sub <- jaccard_calc(item_collector, pipelines) %>%
+                agreement_results_sub <- module_results %>%
                     .[[2]] %>%
                     as.data.frame() %>%
                     rownames_to_column(var = "feature_1") %>%
