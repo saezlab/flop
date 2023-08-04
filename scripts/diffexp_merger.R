@@ -1,7 +1,8 @@
 library(tidyverse)
 library(qs)
 
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+# merges the results of the differential expression analysis from different pipelines and 
+# converts into a wide_format file suitable to be outputted as a tsv file 
 
 args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset",args)+1]

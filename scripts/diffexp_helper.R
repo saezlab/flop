@@ -21,9 +21,10 @@ library(DESeq2)
 limma_analysis <- function(data_norm, metadata){
   norm_counts <- data_norm %>% dplyr::select_if(is.numeric)
   
+  # This removes covariates that have only one level or NA values
   covariates <- metadata %>%
     dplyr::select(-sample_ID) %>% 
-    # .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+    .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
     sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
 
   designmat <- metadata %>%
@@ -69,6 +70,7 @@ deseq2_analysis <- function(counts, metadata) {
   gene_counts <- gene_counts %>% 
     dplyr::select(-gene_symbol)
 
+  # This removes covariates that have only one level or NA values
   covariates <- metadata %>%
     dplyr::select(-sample_ID) %>% 
     .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
@@ -106,6 +108,7 @@ deseq2_analysis <- function(counts, metadata) {
 edger_analysis <- function(counts, metadata) {
   dge_obj <- counts %>% dplyr::select_if(is.numeric) %>% DGEList(count=., samples = metadata)
   
+  # This removes covariates that have only one level or NA values
   covariates <- metadata %>%
     dplyr::select(-sample_ID) %>% 
     .[, sapply(., Negate(anyNA)), drop = FALSE] %>%

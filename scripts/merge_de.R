@@ -1,7 +1,7 @@
 library(tidyverse)
 library(qs)
 
-# get DE files from given dataset ID
+# get DE files from given dataset ID, biological context and statistcal parameter
 args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset",args)+1]
 biocontext <- args[grep("--bio",args)+1]
@@ -26,15 +26,9 @@ for(filename in pipeline_files){
 }
 output_filename <- paste(dataset_id, biocontext, param_id, 'decouplerinput.tsv', sep='__')
 
+# If at least one pipeline passes the threshold, write the output of all pipelines
 if(length(failing_thresh) < 6){
   write.table(out_table, output_filename, sep='\t', quote=FALSE, row.names=FALSE)
 }
 
-# pipeline_files<- list.files(
-#   path = './flop_results/diffexp',
-#   pattern = 'ASPC_KW2449_v_ASPC_DMSO__filtered',
-#   full.names = TRUE
-# )
-# subset_id <- 'test'
-# param_id <- 'stat'
-# threshold <- 50
+

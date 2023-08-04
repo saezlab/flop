@@ -2,7 +2,9 @@ library(tidyverse)
 
 data <- readRDS('./unproc_data/MetaHeart/MetaHeart__counts.rds')
 
-
+# Preprocess the reheat datasets. Bear in mind that the covariates were individually removed, 
+# please check the manuscript for more information about this. Where the age column contained NAs, 
+# we filled those values with the average of the column. 
 
 for(i in 1:length(data)){
   dir.create(paste0('./data/', names(data[i])))
@@ -16,9 +18,8 @@ for(i in 1:length(data)){
   metadata <- int_data$target %>%
     dplyr::rename(sample_ID = Sample, group = HeartFailure) %>%
     .[!duplicated(as.list(.))] %>%
-    relocate(sample_ID, group) %>% #select(-SampleType, -TechnicalTime, -batch_sign) %>% select(-DCM)
-    group_by(group) %>% select(-HTx)
-    #%>% select(-Disease)
+    relocate(sample_ID, group) %>%
+    group_by(group)
     # mutate_at(vars(Age), ~replace_na(., mean(., na.rm = TRUE))) %>% select(-Disease)
   
 

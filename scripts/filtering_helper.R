@@ -1,7 +1,7 @@
 library(tidyverse)
 library(edgeR)
 
-# Insert roxygen skeleton:
+
 
 #' @title Filtering helper
 #' @description This function filters the genes based on the expression level

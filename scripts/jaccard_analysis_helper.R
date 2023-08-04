@@ -1,4 +1,3 @@
-
 #' @title Jaccard index calculation
 #' @description This function calculates the Jaccard index between two lists of items for each pairwise comparison of pipelines
 #' @param data A list of dataframes containing n items for each pipeline
@@ -8,6 +7,7 @@
 #' @examples
 #' jaccard_calc(data, pipelines)
 jaccard_calc <- function(data, pipelines) {
+    # creates the results matrices for storage
     jaccard_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
     agreement_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
     row.names(jaccard_mat) <- pipelines
@@ -20,12 +20,12 @@ jaccard_calc <- function(data, pipelines) {
                 filter(status_pipeline %in% c(pipeline1, pipeline2)) %>% 
                 group_by(status_pipeline, extreme) %>%
                 summarise(n_items = n())
-            
+            # chooses the minimum number of items between the two pipelines for comparison
             n_items_df <- n_items %>% group_by(extreme) %>% summarise(n_items = min(n_items))
 
             data_df <- data %>% filter(status_pipeline %in% c(pipeline1, pipeline2)) %>% 
                 mutate(extreme = factor(extreme, levels = c('top', 'bottom'))) %>%
-                group_by(status_pipeline, extreme) %>% arrange(padj, .by_group = TRUE) %>% #ungroup() %>% ggplot(., aes(x=act, y=padj)) + geom_point()
+                group_by(status_pipeline, extreme) %>% arrange(padj, .by_group = TRUE) %>%
                 group_split() %>%
                 purrr::map(., function(x){
                     extreme <- x %>% pull(extreme) %>% unique()
@@ -37,7 +37,8 @@ jaccard_calc <- function(data, pipelines) {
                     }
                     return(subsetted_items)
                 }) %>% bind_rows() 
-            
+
+            # if there are no items for one of the pipelines, the result value is set to NA
             if(nrow(data_df) == 0){
                 jaccard_mat[pipeline1, pipeline2] <- NA
                 agreement_mat[pipeline1, pipeline2] <- NA
@@ -59,13 +60,14 @@ jaccard_calc <- function(data, pipelines) {
 #' @description This function calculates the Jaccard index for the top and bottom n scores for each pipeline, depending on the prior knowledge source.
 #' The resulting matrix is transformed into a long-format dataframe.
 #' @param merged_data A dataframe containing the scores and items for each pipeline
+#' @param p_cutoff The p-value cutoff for the scores
 #' @return A long-format dataframe containing the Jaccard indices for every combination of pipelines
 #' @export
 #' @examples
 #' jaccard_analysis(merged_data)
 jaccard_analysis <- function(merged_data, p_cutoff = 1) {
     merged_data <- merged_data %>%
-        mutate(status_pipeline = paste0(status, "-", pipeline)) # %>% filter(bio_context == 'ASPC_KW2449_v_ASPC_DMSO', statparam == 'logFC', resource == 'msigdb_hallmarks')
+        mutate(status_pipeline = paste0(status, "-", pipeline)) 
     jaccard_results <- merged_data %>% 
         group_by(statparam, resource, bio_context, main_dataset, subset) %>% 
         group_split() %>%
@@ -76,21 +78,10 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
                 pull()
             to_analyse <- x %>%
                 select(status_pipeline, act, items, padj)
-                # pivot_wider(
-                #     names_from = status_pipeline,
-                #     values_from = act,
-                #     values_fn = {
-                #         mean
-                #     }
-                # ) %>%
-                # pivot_longer(
-                #     cols = -items,
-                #     names_to = "status_pipeline",
-                #     values_to = "scores"
-                # )
             resource <- x %>%
                 distinct(resource) %>%
                 pull()
+            # Cutoffs for the different PK sources
             if (grepl("progeny", resource)) {
                 n_extr <- 3
             } else if (grepl("dorothea", resource)) {
@@ -107,7 +98,7 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
                 max_items <- to_analyse %>%
                     filter(status_pipeline == !!pipeline) %>%
                     slice_max(act, n = n_extr) %>%
-                    filter(padj < !!p_cutoff) %>%
+                    filter(padj < !!p_cutoff) %>% # If applicable, filter by p-value
                     mutate(extreme = 'top')
                 min_items <- to_analyse %>%
                     filter(status_pipeline == !!pipeline) %>%
@@ -116,13 +107,11 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
                     mutate(extreme = 'bottom')
                 extreme_items_sub <- rbind(max_items, min_items)
                 extreme_items <- rbind(extreme_items, extreme_items_sub)
-                # item_collector[['max']][[pipeline]] <- max_items
-                # item_collector[['min']][[pipeline]] <- min_items
                 sub_n_items <- tibble(pipeline = pipeline, n_extr = nrow(extreme_items_sub))
                 n_items <- bind_rows(n_items, sub_n_items)
             }
 
-            n_items_df <- c(outer(pipelines,pipelines,FUN=paste,sep="__")) %>%
+            n_items_df <- c(outer(pipelines, pipelines, FUN = paste, sep = "__")) %>%
             as_tibble() %>%
             separate(
                 col=value,
@@ -130,46 +119,42 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
                 sep="__"
             ) %>% 
             rowwise() %>% 
-            mutate(nitems = min(n_items[n_items[, "pipeline"]==feature_1, ][["n_extr"]], n_items[n_items[, "pipeline"]==name, ][["n_extr"]]))
+            mutate(nitems = min(n_items[n_items[, "pipeline"] == feature_1, ][["n_extr"]], n_items[n_items[, "pipeline"] == name, ][["n_extr"]]))
             
             jaccard_results <- tibble()
             agreement_results <- tibble()
-            # extremes <- c('max', 'min')
-            # for(extreme in extremes){
-                module_results <- jaccard_calc(extreme_items, pipelines)
-                jaccard_results_sub <- module_results %>% #item_collector[[extreme]]
-                    .[[1]] %>%
-                    as.data.frame() %>%
-                    rownames_to_column(var = "feature_1") %>%
-                    pivot_longer(-feature_1) %>%
-                    mutate(
-                        statparam = unique(x$statparam),
-                        bio_context = unique(x$bio_context),
-                        resource = unique(x$resource),
-                        main_dataset = unique(x$main_dataset),
-                        subset = unique(x$subset),
-                        # extreme = !!extreme,
-                        type = 'jaccard'
-                    ) %>% left_join(n_items_df, by = c('feature_1', 'name'))
+            module_results <- jaccard_calc(extreme_items, pipelines)
+            # The results are transformed into a long-format dataframe and merged
+            jaccard_results_sub <- module_results %>%
+                .[[1]] %>%
+                as.data.frame() %>%
+                rownames_to_column(var = "feature_1") %>%
+                pivot_longer(-feature_1) %>%
+                mutate(
+                    statparam = unique(x$statparam),
+                    bio_context = unique(x$bio_context),
+                    resource = unique(x$resource),
+                    main_dataset = unique(x$main_dataset),
+                    subset = unique(x$subset),
+                    type = 'jaccard'
+                ) %>% left_join(n_items_df, by = c('feature_1', 'name'))
 
-                agreement_results_sub <- module_results %>%
-                    .[[2]] %>%
-                    as.data.frame() %>%
-                    rownames_to_column(var = "feature_1") %>%
-                    pivot_longer(-feature_1) %>%
-                    mutate(
-                        statparam = unique(x$statparam),
-                        bio_context = unique(x$bio_context),
-                        resource = unique(x$resource),
-                        main_dataset = unique(x$main_dataset),
-                        subset = unique(x$subset),
-                        # extreme = !!extreme,
-                        type = 'agreement'
-                    ) %>% left_join(n_items_df, by = c('feature_1', 'name'))
+            agreement_results_sub <- module_results %>%
+                .[[2]] %>%
+                as.data.frame() %>%
+                rownames_to_column(var = "feature_1") %>%
+                pivot_longer(-feature_1) %>%
+                mutate(
+                    statparam = unique(x$statparam),
+                    bio_context = unique(x$bio_context),
+                    resource = unique(x$resource),
+                    main_dataset = unique(x$main_dataset),
+                    subset = unique(x$subset),
+                    type = 'agreement'
+                ) %>% left_join(n_items_df, by = c('feature_1', 'name'))
 
-                jaccard_results <- bind_rows(jaccard_results, jaccard_results_sub)
-                agreement_results <- bind_rows(agreement_results, agreement_results_sub)
-            # }
+            jaccard_results <- bind_rows(jaccard_results, jaccard_results_sub)
+            agreement_results <- bind_rows(agreement_results, agreement_results_sub)
 
             
             results_df <- bind_rows(jaccard_results, agreement_results)
@@ -194,7 +179,6 @@ jaccard_analysis <- function(merged_data, p_cutoff = 1) {
             main_dataset,
             subset,
             type,
-            # extreme,
             .keep_all = TRUE
         )
     return(jaccard_results)

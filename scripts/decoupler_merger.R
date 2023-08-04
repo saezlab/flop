@@ -5,6 +5,9 @@ args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset",args)+1]
 status <- args[grep("--status",args)+1]
 file_directory <- args[grep("--file",args)+1][2]
+
+# Read all the DecoupleR output file paths written in the summary file from Nextflow 
+# and merges them into a single file (datasetID__status__result.tsv)
 pipeline_files <- file_directory %>%
   read_lines() %>%
   as_tibble()

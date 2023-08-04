@@ -1,14 +1,10 @@
 library(tidyverse)
 library(qs)
-#library(rstudioapi)
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-# counts_file <- "./data/CCLE_ABCDEF/BONE_v_BREAST__countdata.tsv"
-# meta_file <- "./data/CCLE_ABCDEF/BONE_v_BREAST__metadata.tsv"
-# pipeline <- c("voom_norm", "limma_analysis")
-# status <- "filtered"
-# path_file <- ""
-
+# Performs the filtering, normalization and differential expression analysis. 
+# It sources three different helper files containing the functions for each of these processes.
+# The functions are called based on the pipeline argument.
+# The output consists of a table consisting on log2 fold change, t-value and adjusted p-value for each gene.
 ###Main###
 args <- commandArgs(trailingOnly = FALSE)
 path_file <- args[grep("--file=", args)] %>%

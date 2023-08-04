@@ -27,14 +27,14 @@ corr_analysis <- function(merged_data) {
         select(order(colnames(.))) %>%
         as.matrix()
 
+      # Computes spearman rank correlation betwen the different pipelines
       cor_results_mat <- cor(to_cor, method = "spearman", use = 'complete.obs') 
-      test = cor(to_cor[complete.cases(to_cor),], method = "spearman", use = 'complete.obs') 
-      all(test == cor_results_mat)
+
       occ_mat <- ifelse(is.na(to_cor), 0, 1)
       mat_crossprod <- crossprod(occ_mat)
       
       mat_crossprod[upper.tri(mat_crossprod)] <- NA
-
+      # Computes the number of shared items bewteen the different pipelines
       mat_crossprod_df <- mat_crossprod %>% 
         as.data.frame() %>% 
         rownames_to_column(var = "feature_1") %>% 

@@ -10,6 +10,7 @@ de_datafile <- args[grep("--de_file", args) + 1]
 dataset_id <- args[grep("--dataset",args)+1]
 pval_cutoff <- as.numeric(args[grep("--pval_thresh",args)+1])
 
+# Top-bottom overlap analysis for gene set values
 func_merged_data <- read_tsv(func_datafile)
 func_jaccard_results <- jaccard_analysis(func_merged_data, pval_cutoff)
 
@@ -21,6 +22,7 @@ bio_contexts <- func_merged_data %>% distinct(bio_context) %>% pull()
 
 de_merged_data <- read_tsv(de_datafile)
 
+# Top-bottom overlap analysis for the DE space
 de_jaccard_results <- tibble()
 for(bio_context in bio_contexts){
   de_subset_act <- de_merged_data %>%
