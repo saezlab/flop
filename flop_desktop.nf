@@ -1,9 +1,6 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-params.perturbation = "NA"
-params.k_val = 10
-params.k_type = "range"
 params.ngenes_threshold = 0
 params.pval_threshold = 1
 
@@ -178,31 +175,7 @@ process rank_analysis{
     """
 }
 
-//Rand index analysis
-process rand_index_analysis{
-    
-    publishDir "$params.parent_folder/flop_results/funcomics/rand_index", mode: 'move'
-
-    input:
-    path scripts_dir
-    tuple val(datasetID), path (analysis_results)
-    each perturbation_dataset
-    val(k_val)
-    val(k_type)
-
-    output:
-    tuple val(datasetID), path ("*__randindex.tsv")
-
-    when: perturbation_dataset =~ datasetID
-
-    script:
-
-    """
-    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results} --k_val "${k_val}" --k_type ${k_type}
-    """
-}
-
-//Rand index analysis
+//Top/bottom features overlap analysis
 process jaccard_analysis{
     
     publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
@@ -306,7 +279,7 @@ workflow {
         .set {subset_results}
 
     subset_merger(params.scripts_dir, subset_results)
-        .view{"subset: $it"}
+        // .view{"subset: $it"}
         .concat(diffexpr_merged)
         .groupTuple(by:0, size:2)
         .map{it -> tuple it[0], it[1][0], it[1][1]}
