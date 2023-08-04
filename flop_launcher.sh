@@ -107,8 +107,6 @@ Datasets found: $name_datasets
 Minimum number of significant genes per contrast: $n_thresh
 Pvalue cutoff for the top-bottom overlapping module: $p_thresh"
 
-# check that k_
-
 # Run flop_benchmark
 
 

@@ -1,14 +1,8 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-<<<<<<<< HEAD:flop.nf
-params.perturbation = ""
-params.k_val = 10
-params.k_type = "range"
-========
 params.ngenes_threshold = 0
 params.pval_threshold = 1
->>>>>>>> origin/final:flop_desktop.nf
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -145,12 +139,8 @@ process decoupler_merger{
 }
 
 process subset_merger{
-<<<<<<<< HEAD:flop.nf
-    publishDir "$params.parent_folder/flop_results/fullmerged/", mode: 'copy'
-========
     
     publishDir "$params.parent_folder/flop_results/funcomics/fullmerged/", mode: 'copy'
->>>>>>>> origin/final:flop_desktop.nf
 
     input:
     path scripts_dir
@@ -168,12 +158,8 @@ process subset_merger{
 
 //Rank analysis
 process rank_analysis{
-<<<<<<<< HEAD:flop.nf
-    publishDir "$params.parent_folder/flop_results/rank", mode: 'move'
-========
     
     publishDir "$params.parent_folder/flop_results/funcomics/rank", mode: 'move'
->>>>>>>> origin/final:flop_desktop.nf
 
     input:
     path scripts_dir
@@ -189,39 +175,10 @@ process rank_analysis{
     """
 }
 
-<<<<<<<< HEAD:flop.nf
-//Rand index analysis
-process rand_index_analysis{
-    publishDir "$params.parent_folder/flop_results/rand_index", mode: 'move'
-
-    input:
-    path scripts_dir
-    tuple val(datasetID), path (analysis_results)
-    each perturbation_dataset
-    val(k_val)
-    val(k_type)
-
-    output:
-    tuple val(datasetID), path ("*__randindex.tsv")
-
-    when: perturbation_dataset =~ datasetID
-
-    script:
-
-    """
-    Rscript ${scripts_dir}/scripts/rand_index_analysis.R --dataset ${datasetID} --file ${analysis_results} --k_val "${k_val}" --k_type ${k_type}
-    """
-}
-
-//Rand index analysis
-process jaccard_analysis{
-    publishDir "$params.parent_folder/flop_results/jaccard", mode: 'move'
-========
 //Top/bottom features overlap analysis
 process jaccard_analysis{
     
     publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
->>>>>>>> origin/final:flop_desktop.nf
 
     input:
     path scripts_dir
@@ -324,14 +281,7 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-<<<<<<<< HEAD:flop.nf
-    rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
-        .set {randindex}
-
-    jaccard_analysis(params.scripts_dir, full_results)
-========
     jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
->>>>>>>> origin/final:flop_desktop.nf
         .set {jaccard}
 
 }
