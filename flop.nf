@@ -222,13 +222,6 @@ workflow {
         // .view()
         .set {diffexpr_metrics}
     
-    Channel
-        .of(params.perturbation)
-        .map{it -> it.split(" ")}
-        .flatten()
-        // .view{"Perturbation datasets: ${it}"}
-        .set{perturbation_datasets}
-    
     get_prsources(params.scripts_dir)
         .flatten()
         .map{it -> it.baseName.toString().replaceAll(/__source/, "")}

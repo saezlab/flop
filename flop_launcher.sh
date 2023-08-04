@@ -21,7 +21,7 @@ banner=$"
 cd -P -- "$(dirname -- "$0")"
 
 help_txt="
-Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
+Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-t] [-h]
 
 Argument list:
         -d: data folder, containing the subfolders with the datasets to be analyzed
@@ -62,9 +62,6 @@ while getopts 'd:e:f:p:ht' OPTION; do
     t)
       testdata_downloader
       data_folder="./test_data/"
-      perturbation_array="test"
-      k_val=3
-      k_type="range"
       n_thresh=30
       p_thresh=0.05
       echo "##TEST MODE##"

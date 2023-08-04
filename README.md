@@ -17,7 +17,8 @@ To run FLOP, you need to have conda installed in your computer. Please check [th
 This command will install the necessary dependencies inside an environment.
 
 ```bash
-conda env create -f ./scripts/config_env.yaml
+cd flop/
+conda env create -f ./scripts/flop_env.yaml
 conda activate flop
 ```
 
@@ -37,7 +38,7 @@ FLOP has several ways of personalization. These are all possible input parameter
 - -e: config set, either 'desktop' or 'cluster'
 - -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
 - -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
-- -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis.
+- -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis. Default is 0 (no filtering).
 - -h: shows this help message
 
 You can run FLOP with the minimal settings by using this command:

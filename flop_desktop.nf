@@ -216,13 +216,6 @@ workflow {
         // .view()
         .set {diffexpr_metrics}
     
-    Channel
-        .of(params.perturbation)
-        .map{it -> it.split(" ")}
-        .flatten()
-        // .view{"Perturbation datasets: ${it}"}
-        .set{perturbation_datasets}
-    
     get_prsources(params.scripts_dir)
         .flatten()
         .map{it -> it.baseName.toString().replaceAll(/__source/, "")}
@@ -287,9 +280,6 @@ workflow {
 
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
-
-    // rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
-    //     .set {randindex}
 
     jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
         .set {jaccard}
