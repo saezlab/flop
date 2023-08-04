@@ -1,3 +1,5 @@
+<img src="https://github.com/saezlab/flop/blob/main/man/images/logo.png?raw=1" align="right" width="180" class="no-scaled-link" />
+
 # README
 
 # Description
