@@ -28,17 +28,15 @@ Once installed, you are ready to run FLOP!
 Mode of usage:
 
 ```bash
-bash flop_launcher.sh [-d data_folder] [-e config_set] [-r perturbation_array] [-k k_val] [-b k_type] [-t] [-h]
+bash flop_launcher.sh [-d data folder] [-e config set][-p pvalue threshold] [-f n DE genes threshold] [-t] [-h]
 ```
 
 FLOP has several ways of personalization. These are all possible input parameters:
 
 - -d: data folder, containing the subfolders with the datasets to be analyzed
 - -e: config set, either 'desktop' or 'cluster'
-- -r: perturbation array, a list of perturbational datasets to be included in the Rand Index analysis.
-- -k: k value, the number of clusters to be used in the Rand Index analysis.
-- -b: k value calculation, either 'range' or 'single'.
 - -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
+- -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
 - -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis.
 - -h: shows this help message
 
@@ -107,18 +105,12 @@ A long format table that contains the functional scores of all different prior k
 
 ## Rank correlation results:
 
-A long format table that contains the spearman rank correlation scores per comparison, parameter, filtering status, biological context and prior knowledge source. The comparisons are done at the pipeline level, normalisation level and differential expression method level.
+A long format table that contains the spearman rank correlation and coocurrence scores per comparison, parameter, filtering status, biological context and prior knowledge source.
 
-## Jaccard index results
+## Top/bottom features overlap results
 
-A long format table that contains the Jaccard index scores per pipeline comparison, parameter, filtering status, biological context and prior knowledge source. The number of top and bottom functional categories included vary between the different prior knowledge source:
+A long format table that contains the Jaccard index and similarity scores per pipeline comparison, parameter, filtering status, biological context and prior knowledge source. The number of top and bottom functional categories included vary between the different prior knowledge source:
 
 - Dorothea: 15 top and 15 bottom
 - MSigDB hallmarks: top 5 and bottom 5
 - PROGENy: top 3 and bottom 3
-
-## Rand index analysis
-
-A long format table that contains the Rand index analysis for a specified number of K values, per pipeline comparison, filtering status, biological context and prior knowledge source.
-
-Since this analysis is only informative when there might be a ground truth (such a specific number of cell lines, treatments, etc.) that makes the clustering of the samples important for a study, we implemented this analysis as optional inside the FLOP architecture. You can select the datasets, the K value, and if this value is unique or the maximum of a range, that will be included in this analysis during the initial configuration.
