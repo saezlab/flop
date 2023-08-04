@@ -220,19 +220,18 @@ heatmap_plotter <- function(data, facet, datasets, resource){
 resources <- c('DE', 'DoRothEA', 'MSigDB_Hallmarks', 'PROGENy')
 
 for(resource in resources){
-    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'reheat', resource)
-    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index, max', 'reheat', resource)
-    heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'max'), 'Similarity score, max', 'reheat', resource)
-    heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'min'), 'Similarity score, min', 'reheat', resource)
+    # heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'reheat', resource)
+    # heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index, max', 'reheat', resource)
+    # heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'max'), 'Similarity score, max', 'reheat', resource)
+    # heatmap_plotter(results_jaccard %>% filter(type == 'agreement', extreme == 'min'), 'Similarity score, min', 'reheat', resource)
 
-    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', resource)
-    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'GSE186341', resource)
-
-    heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'CCLE', resource)
-    heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'CCLE', resource)
+    # heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'GSE186341', resource)
+    # heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'GSE186341', resource)
 
     heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'CCLE', resource)
     heatmap_plotter(results_jaccard %>% filter(type == 'jaccard'), 'Jaccard index', 'CCLE', resource)
+
+    heatmap_plotter(results_jaccard %>% filter(type == 'agreement'), 'Similarity score', 'CCLE', resource)
 }
 
 heatmap_plotter(results_rank %>% filter(type == 'correlation'), 'Rank correlation', 'Sweet18', resource)
@@ -246,9 +245,22 @@ ggsave(plot = legend_anno_grob, filename = "./flop_results/paper_plots/heatmap_l
 
 # heatmap_grob <- grid::grid.grabExpr(draw(heatmaps_list, ht_gap = unit(2, "cm")))
 
+ results_jaccard_boxplot %>% 
+ separate(feature_1, into=c('status_1', 'ext1'),sep = '-')%>% 
+ separate(name, into=c('status_2', 'ext2'),sep = '-') %>%
+ select(-ext1,-ext2) %>% group_by(status_1, status_2) %>%
+ select(status_1, status_2, value) %>%
+ mutate(status_id = paste(status_1, status_2, sep = '-')) %>%
+ ggplot(., aes(x=status_id, y=value, color = status_id)) +
+ ggforce::geom_sina(alpha = 0.05) +
+ ggpubr::stat_compare_means(aes(x=status_id, y=value),size = 4, method = 'wilcox.test', comparisons = list(c('filtered-filtered', 'unfiltered-unfiltered'), c('filtered-filtered', 'filtered-unfiltered'),c('unfiltered-unfiltered', 'filtered-unfiltered')), method.args = list(alternative = 'greater', paired = TRUE, p.adjust.methods = "BH")) 
+
+results_jaccard_boxplot %>% 
+filter(resource=='DE') %>% group_by(id) 
 
 
-results_rank_correlation <- results_rank %>% filter(statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14'), type == 'correlation') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+
+results_rank_correlation <- results_rank %>% filter(statparam == 'stat', main_dataset %in% c('CCLE'), type == 'correlation') %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
     mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
                                 grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
                                 grepl('progeny', resource) ~ 'PROGENy',
@@ -269,7 +281,7 @@ boxplot_rank <- ggplot(results_rank_correlation, aes(x = resource, y = value, fi
         axis.title.x = element_blank(),
         text = element_text(size = 12))
 
-results_jaccard_boxplot <- results_jaccard %>% filter(statparam == 'stat', main_dataset %in% c('Spurell19', 'Sweet18', 'vanHeesch19', 'Yang14')) %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
+results_jaccard_boxplot <- results_jaccard %>% filter(statparam == 'stat', main_dataset %in% c('CCLE')) %>% mutate(Space = ifelse(resource=='DE', 'Gene space', 'Functional space')) %>%
     mutate(resource = case_when(grepl('dorothea', resource) ~ 'DoRothEA',
                                 grepl('msigdb_hallmarks', resource) ~ 'MSigDB Hallmarks',
                                 grepl('progeny', resource) ~ 'PROGENy',

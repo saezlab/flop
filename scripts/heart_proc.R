@@ -16,9 +16,12 @@ for(i in 1:length(data)){
   metadata <- int_data$target %>%
     dplyr::rename(sample_ID = Sample, group = HeartFailure) %>%
     .[!duplicated(as.list(.))] %>%
-    relocate(sample_ID, group) %>% select(-SampleType, -TechnicalTime, -batch_sign) %>%
-    group_by(group) %>%
-    mutate_at(vars(Age), ~replace_na(., mean(., na.rm = TRUE))) 
+    relocate(sample_ID, group) %>% #select(-SampleType, -TechnicalTime, -batch_sign) %>% select(-DCM)
+    group_by(group) %>% select(-HTx)
+    #%>% select(-Disease)
+    # mutate_at(vars(Age), ~replace_na(., mean(., na.rm = TRUE))) %>% select(-Disease)
+  
+
 
   write_tsv(metadata, paste0('./data/', names(data[i]), '/', names(data[i]), '__metadata.tsv'))
 

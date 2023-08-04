@@ -8,7 +8,7 @@ source(paste0(path_file, "jaccard_analysis_helper.R"))
 func_datafile <- args[grep("--func_file", args) + 1]
 de_datafile <- args[grep("--de_file", args) + 1]
 dataset_id <- args[grep("--dataset",args)+1]
-pval_cutoff <- args[grep("--pval_thresh",args)+1]
+pval_cutoff <- as.numeric(args[grep("--pval_thresh",args)+1])
 
 func_merged_data <- read_tsv(func_datafile)
 func_jaccard_results <- jaccard_analysis(func_merged_data, pval_cutoff)

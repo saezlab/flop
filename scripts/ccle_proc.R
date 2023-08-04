@@ -7,7 +7,7 @@ ID_gen <- function(n = 10) {
 }
 
 set.seed(1)
-n=5
+n=1
 random_ident <- ID_gen(n)
 
 
