@@ -1,10 +1,10 @@
 library(tidyverse)
-# setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
+# Merges the subsets of a given dataset into a single file
 status <- c("filtered", "unfiltered")
 args <- commandArgs(trailingOnly = FALSE)
 dataset_id <- args[grep("--dataset", args) + 1]
-file_list <- args[grep("--files", args) + 1] %>% strsplit(., split = " ") %>% .[[1]] %>% as_tibble()
+file_list <- args[grep("--files", args) + 1] %>% strsplit(., split = " ") %>% unlist() %>% as_tibble()
 files_info <- file_list %>%
     dplyr::rename(filename = value) %>%
     separate(

@@ -1,7 +1,7 @@
 library(tidyverse)
 library(edgeR)
 
-# Insert roxygen skeleton:
+
 
 #' @title Filtering helper
 #' @description This function filters the genes based on the expression level
@@ -12,6 +12,14 @@ library(edgeR)
 #' @importFrom edgeR DGEList filterByExpr
 #' 
 filtering <- function(counts, metadata) {
+    covariates <- metadata %>%
+        dplyr::select(-sample_ID) %>% 
+        .[, sapply(., Negate(anyNA)), drop = FALSE] %>%
+        sapply(., function(x) n_distinct(x)) %>% as.data.frame() %>% filter(. > 1) %>% rownames()
+
+    designmat <- metadata %>%
+        model.matrix(as.formula(rlang::parse_expr(paste(c("~ 0", covariates), collapse = " + "))), data=.)
+
     samples <- metadata %>%
         select(sample_ID, group) %>%
         arrange(group)
@@ -20,7 +28,7 @@ filtering <- function(counts, metadata) {
         column_to_rownames("gene_symbol") %>%
         DGEList(count = ., samples = samples)
 
-    filtered_genes <- filterByExpr(dge_obj)
+    filtered_genes <- filterByExpr(dge_obj, design = designmat)
     filtered_counts <- counts[filtered_genes,]
     return (filtered_counts)
 }

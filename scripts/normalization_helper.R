@@ -91,9 +91,16 @@ log2quant_norm <- function(data, ...) {
 #' @examples
 #' voom_norm(gene_counts, metadata)
 voom_norm <- function(data, metadata) {
+  covariates <- metadata %>%
+    dplyr::select(-sample_ID) %>%
+    sapply(., function(x) n_distinct(x)) %>%
+    as.data.frame() %>%
+    filter(. > 1) %>%
+    rownames()
+
   designmat <- metadata %>%
-    dplyr::select(sample_ID, group) %>%
-    model.matrix(~ 0 + group, data=.)
+    model.matrix(as.formula(rlang::parse_expr(paste(c("~ 0", covariates), collapse = " + "))), data=.)
+
   voom_mat <- data %>%
     select_if(is.numeric) %>%
     as.matrix() %>%

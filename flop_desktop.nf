@@ -1,7 +1,6 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-<<<<<<< HEAD
 <<<<<<<< HEAD:flop.nf
 params.perturbation = ""
 params.k_val = 10
@@ -13,15 +12,6 @@ params.pval_threshold = 1
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
-=======
-params.ngenes_threshold = 0
-params.pval_threshold = 1
-
-//Downloads and stores prior knowledge sources
-process get_prsources{
-    memory '2 GB'
-
->>>>>>> origin/final
     publishDir "$params.scripts_dir/scripts/dc_resources", mode: 'copy'
 
     input:
@@ -39,10 +29,6 @@ process get_prsources{
 
 //Performs filtering, normalisation and differential expression analysis
 process contrast_creator{
-<<<<<<< HEAD
-=======
-    memory '120 GB'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -60,10 +46,6 @@ process contrast_creator{
 
 //Performs filtering, normalisation and differential expression analysis
 process diffexp_analysis{
-<<<<<<< HEAD
-=======
-    memory '8 GB'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -83,10 +65,6 @@ process diffexp_analysis{
 
 //Merges the output of differential expression analysis files
 process output_merge_de{
-<<<<<<< HEAD
-=======
-    memory '64 GB'
->>>>>>> origin/final
 
     publishDir "$params.parent_folder/flop_results/diffexp", mode: 'copy'
 
@@ -108,10 +86,6 @@ process output_merge_de{
 
 //Merges the results from different pipelines
 process downstream_merge_de{
-<<<<<<< HEAD
-=======
-    memory '2 GB'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -133,11 +107,7 @@ process downstream_merge_de{
 
 //Functional analysis 
 process func_decoupler{
-<<<<<<< HEAD
     
-=======
-    memory '4 GB'
->>>>>>> origin/final
     input:
     path scripts_dir
     tuple val(subsetID), val(biocontext), val(status), path(decoupler_files)
@@ -157,11 +127,7 @@ process func_decoupler{
 
 //Merges the results from DecoupleR
 process decoupler_merger{
-<<<<<<< HEAD
     
-=======
-    memory '4 GB'
->>>>>>> origin/final
     input:
     path scripts_dir
     tuple val(subsetID), val(status), path (decoupler_results)
@@ -179,17 +145,12 @@ process decoupler_merger{
 }
 
 process subset_merger{
-<<<<<<< HEAD
 <<<<<<<< HEAD:flop.nf
     publishDir "$params.parent_folder/flop_results/fullmerged/", mode: 'copy'
 ========
     
     publishDir "$params.parent_folder/flop_results/funcomics/fullmerged/", mode: 'copy'
 >>>>>>>> origin/final:flop_desktop.nf
-=======
-    memory '25 GB'
-    publishDir "$params.parent_folder/flop_results/funcomics/fullmerged/", mode: 'copy'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -207,17 +168,12 @@ process subset_merger{
 
 //Rank analysis
 process rank_analysis{
-<<<<<<< HEAD
 <<<<<<<< HEAD:flop.nf
     publishDir "$params.parent_folder/flop_results/rank", mode: 'move'
 ========
     
     publishDir "$params.parent_folder/flop_results/funcomics/rank", mode: 'move'
 >>>>>>>> origin/final:flop_desktop.nf
-=======
-    memory '25 GB'
-    publishDir "$params.parent_folder/flop_results/funcomics/rank", mode: 'move'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -233,7 +189,6 @@ process rank_analysis{
     """
 }
 
-<<<<<<< HEAD
 <<<<<<<< HEAD:flop.nf
 //Rand index analysis
 process rand_index_analysis{
@@ -267,12 +222,6 @@ process jaccard_analysis{
     
     publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
 >>>>>>>> origin/final:flop_desktop.nf
-=======
-//Top/bottom features overlap analysis
-process jaccard_analysis{
-    memory '25 GB'
-    publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
->>>>>>> origin/final
 
     input:
     path scripts_dir
@@ -375,7 +324,6 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-<<<<<<< HEAD
 <<<<<<<< HEAD:flop.nf
     rand_index_analysis(params.scripts_dir, full_results, perturbation_datasets, params.k_val, params.k_type)
         .set {randindex}
@@ -384,9 +332,6 @@ workflow {
 ========
     jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
 >>>>>>>> origin/final:flop_desktop.nf
-=======
-    jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
->>>>>>> origin/final
         .set {jaccard}
 
 }

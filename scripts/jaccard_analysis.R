@@ -1,120 +1,49 @@
 library(tidyverse)
 
-#' @title Jaccard index calculation
-#' @description This function calculates the Jaccard index between two lists of items for each pairwise comparison of pipelines
-#' @param data A list of dataframes containing n items for each pipeline
-#' @param pipelines A vector of pipeline names
-#' @return A matrix of Jaccard indices
-#' @export
-#' @examples
-#' jaccard_calc(data, pipelines)
-jaccard_calc <- function(data, pipelines) {
-    item_mat <- matrix(data = NA, nrow = length(pipelines), ncol = length(pipelines))
-    row.names(item_mat) <- pipelines
-    colnames(item_mat) <- pipelines
-    for (pipeline1 in pipelines) {
-        for (pipeline2 in pipelines) {
-            item_mat[pipeline1, pipeline2] <- bayesbio::jaccardSets(data[[pipeline1]], data[[pipeline2]])
-        }
-    }
-    return(item_mat)
-}
-
-#' @title Jaccard analysis
-#' @description This function calculates the Jaccard index for the top and bottom n scores for each pipeline, depending on the prior knowledge source.
-#' The resulting matrix is transformed into a long-format dataframe.
-#' @param merged_data A dataframe containing the scores and items for each pipeline
-#' @return A long-format dataframe containing the Jaccard indices for every combination of pipelines
-#' @export
-#' @examples
-#' jaccard_analysis(merged_data)
-jaccard_analysis <- function(merged_data) {
-    pipelines <- merged_data %>%
-        distinct(pipeline) %>%
-        pull()
-    jaccard_results <- merged_data %>%
-        group_by(statparam, resource, bio_context, status, main_dataset) %>%
-        group_split() %>%
-        purrr::map(., function(x) {
-            to_analyse <- x %>%
-                select(pipeline, scores, items) %>%
-                pivot_wider(
-                    names_from = pipeline,
-                    values_from = scores,
-                    values_fn = {
-                        mean
-                    }
-                ) %>%
-                pivot_longer(
-                    cols = -items,
-                    names_to = "pipeline",
-                    values_to = "scores"
-                )
-            resource <- x %>%
-                distinct(resource) %>%
-                pull()
-            if (resource == "progeny") {
-                n_extr <- 3
-            } else if (resource == "dorothea") {
-                n_extr <- 15
-            } else if (resource == "msigdb_hallmarks") {
-                n_extr <- 5
-            }
-            item_collector <- list()
-            for (pipeline in pipelines) {
-                max_items <- to_analyse %>%
-                    filter(pipeline == !!pipeline) %>%
-                    slice_max(scores, n = n_extr) %>%
-                    pull(items)
-                min_items <- to_analyse %>%
-                    filter(pipeline == !!pipeline) %>%
-                    slice_min(scores, n = n_extr) %>%
-                    pull(items)
-                extreme_items <- c(max_items, min_items)
-                item_collector[[pipeline]] <- extreme_items
-            }
-
-            jaccard_results <- jaccard_calc(item_collector, pipelines) %>%
-                as.data.frame() %>%
-                rownames_to_column(var = "feature_1") %>%
-                pivot_longer(-feature_1) %>%
-                mutate(
-                    statparam = unique(x$statparam),
-                    bio_context = unique(x$bio_context),
-                    resource = unique(x$resource),
-                    status = unique(x$status),
-                    main_dataset = unique(x$main_dataset)
-                )
-
-            return(jaccard_results)
-        }) %>%
-        bind_rows() %>%
-        subset(feature_1 != name) %>%
-        rowwise() %>%
-        mutate(
-            id = paste0(
-                sort(c(feature_1, name))[1],
-                " - ",
-                sort(c(feature_1, name))[2]
-            )
-        ) %>%
-        distinct(
-            id,
-            statparam,
-            bio_context,
-            resource,
-            status,
-            main_dataset,
-            .keep_all = TRUE
-        )
-    return(jaccard_results)
-}
-
 args <- commandArgs(trailingOnly = FALSE)
-datafile <- args[grep("--file", args) + 1][2]
-dataset_id <- args[grep("--dataset", args) + 1]
+path_file <- args[grep("--file=", args)] %>%
+  sub("jaccard_analysis.R", "", .) %>%
+  sub("--file=", "", .)
+source(paste0(path_file, "jaccard_analysis_helper.R"))
+func_datafile <- args[grep("--func_file", args) + 1]
+de_datafile <- args[grep("--de_file", args) + 1]
+dataset_id <- args[grep("--dataset",args)+1]
+pval_cutoff <- as.numeric(args[grep("--pval_thresh",args)+1])
 
-merged_data <- read_tsv(datafile)
-jaccard_results <- jaccard_analysis(merged_data)
+# Top-bottom overlap analysis for gene set values
+func_merged_data <- read_tsv(func_datafile)
+func_jaccard_results <- jaccard_analysis(func_merged_data, pval_cutoff)
+
+statparams <- func_merged_data %>% distinct(statparam) %>% pull()
+status <- func_merged_data %>% distinct(status) %>% pull()
+pipelines <- func_merged_data %>% distinct(pipeline) %>% pull()
+bio_contexts <- func_merged_data %>% distinct(bio_context) %>% pull()
+
+
+de_merged_data <- read_tsv(de_datafile)
+
+# Top-bottom overlap analysis for the DE space
+de_jaccard_results <- tibble()
+for(bio_context in bio_contexts){
+  de_subset_act <- de_merged_data %>%
+          select(ID, contains(bio_context), -contains('padj')) %>%
+          pivot_longer(-c(ID), names_to = "runID", values_to = "act") %>%
+          separate(runID, into = c("statparam", "status", "pipeline", "bio_context", "main_dataset", "subset"), sep = "__")  %>% 
+          mutate(resource = 'DE') %>% 
+          dplyr::rename('items' = 'ID')
+  de_subset_padj <- de_merged_data %>%
+        select(ID, contains(bio_context) & contains('padj')) %>%
+        pivot_longer(-c(ID), names_to = "runID", values_to = "padj") %>%
+        separate(runID, into = c("statparam", "status", "pipeline", "bio_context", "main_dataset", "subset"), sep = "__")  %>% 
+        select(-statparam) %>%
+        mutate(resource = 'DE') %>% 
+        dplyr::rename('items' = 'ID')
+  de_subset <- full_join(de_subset_act, de_subset_padj, by = c("status", "pipeline", "bio_context", "main_dataset", "subset", "items", "resource")) %>%
+  filter(!is.na(act) & !is.na(padj))
+  de_subset_jaccard_results <- jaccard_analysis(de_subset, pval_cutoff)
+  de_jaccard_results <- bind_rows(de_jaccard_results, de_subset_jaccard_results)
+}
+
+jaccard_results <- bind_rows(func_jaccard_results, de_jaccard_results)
+
 write_tsv(jaccard_results, file = paste0(dataset_id, "__jaccard.tsv"))
-
