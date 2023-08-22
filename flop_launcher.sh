@@ -41,7 +41,7 @@ error_func () {
 }
 
 testdata_downloader () {
-  curl -C - -O https://filedn.eu/ld7S7VEWtgOf5uN0V7fbp84/test_data.zip
+  curl -C - -O https://zenodo.org/record/8272401/files/test_data.zip?download=1
   mkdir ./test_data/
   mkdir ./test_data/test/
   unzip -n test_data.zip -d ./test_data/test/ 
