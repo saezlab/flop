@@ -78,9 +78,9 @@ while getopts 'd:e:f:p:ht' OPTION; do
   esac 
 done
 if [ $OPTIND -eq 1 ]; then error_func; fi
-if [ -z $data_folder ] || [ -z $config_set ]; then error_func; fi
+if [ -z $data_folder ]; then error_func; fi
 if [ -z $n_thresh ]; then n_thresh=0; fi
-if [ -e $config_set ]; then config_set='desktop'; fi
+if [ -z $config_set ]; then config_set='desktop'; fi
 if [ -z $p_thresh ]; then p_thresh=1; fi
 shift "$(($OPTIND -1))"
 
