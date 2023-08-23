@@ -2,9 +2,9 @@ library(tidyverse)
 
 args <- commandArgs(trailingOnly = FALSE)
 path_file <- args[grep("--file=", args)] %>%
-  sub("jaccard_analysis.R", "", .) %>%
+  sub("top_bottom_overlap_analysis.R", "", .) %>%
   sub("--file=", "", .)
-source(paste0(path_file, "jaccard_analysis_helper.R"))
+source(paste0(path_file, "top_bottom_overlap_analysis_helper.R"))
 func_datafile <- args[grep("--func_file", args) + 1]
 de_datafile <- args[grep("--de_file", args) + 1]
 dataset_id <- args[grep("--dataset",args)+1]
@@ -46,4 +46,4 @@ for(bio_context in bio_contexts){
 
 jaccard_results <- bind_rows(func_jaccard_results, de_jaccard_results)
 
-write_tsv(jaccard_results, file = paste0(dataset_id, "__jaccard.tsv"))
+write_tsv(jaccard_results, file = paste0(dataset_id, "__overlap.tsv"))

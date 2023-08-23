@@ -182,7 +182,7 @@ process rank_analysis{
 }
 
 //Top/bottom features overlap analysis
-process jaccard_analysis{
+process top_bottom_overlap_analysis{
     memory '25 GB'
     publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
 
@@ -197,7 +197,7 @@ process jaccard_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/jaccard_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results} --pval_thresh ${pval_thresh}
+    Rscript ${scripts_dir}/scripts/top_bottom_overlap_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results} --pval_thresh ${pval_thresh}
     """
 }
 
@@ -287,7 +287,7 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    jaccard_analysis(params.scripts_dir, full_results, params.pval_threshold)
+    top_bottom_overlap_analysis(params.scripts_dir, full_results, params.pval_threshold)
         .set {jaccard}
 
 }
