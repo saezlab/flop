@@ -24,6 +24,14 @@ conda activate flop
 
 Once installed, you are ready to run FLOP!
 
+## Quick Start
+
+It is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA study via:
+
+```bash
+bash flop_launcher.sh -t -e 'desktop'
+```
+
 ## Run
 
 Mode of usage:
@@ -45,12 +53,6 @@ You can run FLOP with the minimal settings by using this command:
 
 ```bash
 bash flop_launcher.sh [-d data_folder] [-e config_set]
-```
-
-Also, it is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA dataset via:
-
-```bash
-bash flop_launcher.sh -t [-e config_set]
 ```
 
 # Input
