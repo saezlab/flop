@@ -29,7 +29,7 @@ Once installed, you are ready to run FLOP!
 It is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA study via:
 
 ```bash
-bash flop_launcher.sh -t -e 'desktop'
+bash flop_launcher.sh -t
 ```
 
 ## Run
@@ -65,14 +65,14 @@ FLOP works with two or three different files. Each different dataset folder shou
 		./GSE186341__countdata.tsv
 		./GSE186341__metadata.tsv
 		./GSE186341__contrast.tsv
-	./GTEx_subset1/
-		./GTEx_subset1__countdata.tsv
-		./GTEx_subset1__metadata.tsv
-		./GTEx_subset1__contrast.tsv
-	./GTEX_subset2/
-		./GTEx_subset2__countdata.tsv
-		./GTEx_subset2__metadata.tsv
-		./GTEx_subset2__contrast.tsv
+	./Reheat_subset1/
+		./Reheat_subset1__countdata.tsv
+		./Reheat_subset1__metadata.tsv
+		./Reheat_subset1__contrast.tsv
+	./Reheat_subset2/
+		./Reheat_subset2__countdata.tsv
+		./Reheat_subset2__metadata.tsv
+		./Reheat_subset2__contrast.tsv
 	./CCLE/
 		./CCLE__countdata.tsv
 		./CCLE__metadata.tsv
@@ -112,7 +112,7 @@ A long format table that contains the spearman rank correlation and coocurrence 
 
 ## Top/bottom features overlap results
 
-A long format table that contains the Jaccard index and similarity scores per pipeline comparison, parameter, filtering status, biological context and prior knowledge source. The number of top and bottom functional categories included vary between the different prior knowledge source:
+A long format table that contains the Top and Bottom features overlap index and similarity scores per pipeline comparison, parameter, filtering status, biological context and prior knowledge source. The number of top and bottom functional categories included vary between the different prior knowledge source:
 
 - Dorothea: 15 top and 15 bottom
 - MSigDB hallmarks: top 5 and bottom 5
