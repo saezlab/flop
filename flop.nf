@@ -184,7 +184,7 @@ process rank_analysis{
 //Top/bottom features overlap analysis
 process top_bottom_overlap_analysis{
     memory '25 GB'
-    publishDir "$params.parent_folder/flop_results/funcomics/jaccard", mode: 'move'
+    publishDir "$params.parent_folder/flop_results/funcomics/overlap", mode: 'move'
 
     input:
     path scripts_dir
@@ -192,7 +192,7 @@ process top_bottom_overlap_analysis{
     val(pval_thresh)
 
     output:
-    tuple val(datasetID), path ("*__jaccard.tsv")
+    tuple val(datasetID), path ("*__overlap.tsv")
 
     script:
 
