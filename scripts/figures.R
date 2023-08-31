@@ -10,11 +10,11 @@ reheat_de <- read_tsv('./flop_results/diffexp/reheat__deresults.tsv') %>%
   separate(name, into = c('colid', 'filtering', 'de', 'contrast', 'dataset', 'study'), sep = '__') %>%
   pivot_wider(names_from = colid, values_from = value)
 full_df <- list.files('./flop_results/funcomics/fullmerged/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14"))
-similarity_df <- list.files('flop_results/funcomics/jaccard/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14"))
+  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
+similarity_df <- list.files('flop_results/funcomics/overlap/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
+  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
 correlation_df <-  list.files('flop_results/funcomics/rank/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14"))
+  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
 
 # ccle and panacea
 panacea_spearman <- read_tsv('flop_results/funcomics/rank/GSE186341__total__rank.tsv')
@@ -31,8 +31,8 @@ plot_reheat_detailed <- function(int_pipelines, int_dataset) {
 
   # volcanos
   toplot <- reheat_de %>%
-    mutate(pipeline = paste0(filtering, '+', str_replace(de , 'NA\\+', ''))) %>%
-    dplyr::filter(pipeline %in% int_pipelines & study == int_dataset) %>%
+    mutate(pipeline = paste0(filtering, '+', str_replace(de , 'NA\\+', ''))) %>% 
+    dplyr::filter(pipeline %in% !!int_pipelines & study == !!int_dataset) %>%
     mutate(status = case_when(padj <= p_cutoff & logFC >= lfc_cutoff ~ 'Up',
                               padj <= p_cutoff & logFC <= -lfc_cutoff ~ 'Down',
                               TRUE ~ 'Not')) %>%
@@ -75,7 +75,7 @@ plot_reheat_detailed <- function(int_pipelines, int_dataset) {
   # genespace corr
   hallmarks_df <- full_df %>%
     mutate(pipeline = str_replace_all(obs_id, 'yes_v_no__|__ulm', '') %>% str_replace_all('__', '\\+') %>% str_replace_all('\\+NA', '')) %>%
-    dplyr::filter(pipeline %in%int_pipelines & main_dataset == int_dataset & statparam == 'stat') %>%
+    dplyr::filter(pipeline %in% int_pipelines & main_dataset == 'reheat' & subset == int_dataset & statparam == 'stat') %>%
     dplyr::filter(resource == 'msigdb_hallmarks')
   
   toplot <- hallmarks_df %>%
@@ -121,9 +121,9 @@ plot_reheat_detailed <- function(int_pipelines, int_dataset) {
 p <- plot_reheat_detailed( c('unfiltered+edger', 'filtered+deseq2'), 'Spurell19')
 ggsave('flop_results/plots/fig2.png', p,  width = 15, height = 10, dpi = 300)
 supp1 <- plot_reheat_detailed(c('unfiltered+tmm+limma', 'filtered+tmm+limma'), 'Spurell19')
-ggsave('flop_results/plots/supp1.png', supp1,  width = 15, height = 10, dpi = 300)
+ggsave('flop_results/plots/supp2.png', supp1,  width = 15, height = 10, dpi = 300)
 supp2 <- plot_reheat_detailed(c('unfiltered+edger', 'filtered+deseq2'), 'Yang14')
-ggsave('flop_results/plots/supp2.png', supp2,  width = 15, height = 10, dpi = 300)
+ggsave('flop_results/plots/supp3.png', supp2,  width = 15, height = 10, dpi = 300)
 
 #### fig 3 ####
 correlation_toplot <- correlation_df %>%
@@ -133,7 +133,6 @@ correlation_toplot <- correlation_df %>%
   summarise(spearman_average = mean(value), spearman_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
-  
   dplyr::filter(pipeline_a != pipeline_b) %>%
   mutate(pipeline_a = factor(pipeline_a, levels = sort(unique(pipeline_a))),
          pipeline_b = factor(pipeline_b, levels = sort(unique(pipeline_b))))
@@ -146,7 +145,7 @@ p <- ggplot(correlation_toplot, aes(x = pipeline_a, y = pipeline_b, size = -spea
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-ggsave('flop_results/plots/fig3a.png', p, width = 12, height = 10, dpi = 300)
+ggsave('flop_results/plots/fig3.png', p, width = 12, height = 10, dpi = 300)
 
 # values for text
 correlation_toplot %>% 
@@ -199,7 +198,7 @@ wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.m
 similarity_toplot <- similarity_df %>%
   mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
   dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
-  dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14")) %>%
+  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat') %>%
   group_by(id, resource) %>%
   summarise(similarity_average = mean(value), similarity_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
@@ -217,7 +216,7 @@ p <- ggplot(similarity_toplot, aes(x = pipeline_a, y = pipeline_b, size = -simil
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-ggsave('flop_results/plots/fig4a.png', p, width = 12, height = 10, dpi = 300)
+ggsave('flop_results/plots/fig4.png', p, width = 12, height = 10, dpi = 300)
 
 # values for text
 similarity_toplot %>% 
@@ -247,13 +246,13 @@ similarity_toplot %>%
   mutate(unfil_deseq_edger_b =  ifelse(grepl('unfiltered', pipeline_b) & (grepl('edger', pipeline_b) | grepl('deseq2', pipeline_b)), 'Yes', 'No')) %>%
   mutate(unfil_deseq_edger = ifelse(unfil_deseq_edger_a == 'Yes' & unfil_deseq_edger_b == 'Yes', 'Yes', 'No')) %>%
   group_by(unfil_deseq_edger, resource) %>%
-  summarise(mean(spearman_average))
+  summarise(mean(similarity_average))
 
 # sup about variance
 sim_values <- similarity_df %>%
   mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
   dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
-  dplyr::filter(!main_dataset %in% c('vanHeesch19', 'Sweet18')) %>%
+  dplyr::filter(!subset %in% c('vanHeesch19', 'Sweet18')) %>%
   transmute(id = paste(id, main_dataset, resource, sep = '___'), similarity = value)
   
 
@@ -261,7 +260,7 @@ cor_values <- correlation_df %>%
   mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
   dplyr::filter(feature_1 != name) %>%
   dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
-  dplyr::filter(!main_dataset %in% c('vanHeesch19', 'Sweet18')) %>%
+  dplyr::filter(!subset %in% c('vanHeesch19', 'Sweet18')) %>%
   transmute(id = paste(id, main_dataset, resource, sep = '___'), correlation = value)
 
 toplot <- full_join(cor_values, sim_values, by = 'id') %>%
@@ -274,7 +273,7 @@ p <- ggplot(toplot, aes(x = name, y = value)) +
   stat_compare_means(method = 'wilcox.test', paired = TRUE, comparisons = list(c('correlation', 'similarity'))) +
   theme_cowplot()
 
-ggsave('flop_results/plots/suppfig3.png', p, width = 5, height = 5, dpi = 300)
+ggsave('flop_results/plots/supp4.png', p, width = 5, height = 5, dpi = 300)
 
 #### fig 5 ####
 spearman_df <- bind_rows(ccle = ccle_spearman, panacea = panacea_spearman, .id = 'dataset') %>%
@@ -317,7 +316,7 @@ p <- ggplot(similarity_df, aes(x = pipeline_a, y = pipeline_b, size = -similarit
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-# values for text
+# # values for text
 spearman_df %>% 
   mutate(unfil_limma_a = ifelse(pipeline_a == 'unfiltered-vsn+limma', 'Yes', 'No')) %>%
   mutate(unfil_limma_b = ifelse(pipeline_b == 'unfiltered-vsn+limma', 'Yes', 'No')) %>%
@@ -339,3 +338,56 @@ similarity_toplot %>%
   group_by(unfil_deseq_edger, resource) %>%
   summarise(mean(spearman_average))
 
+## Supp figure
+
+plot_reheat_tscores <- function(int_pipelines, int_dataset) {
+  hallmark <- read_tsv("./scripts/dc_resources/msigdb_hallmarks__source.tsv")
+  pick_HM <- hallmark %>% filter(source %in% c("HALLMARK_ADIPOGENESIS",
+                                             "HALLMARK_IL6_JAK_STAT3_SIGNALING",
+                                             "HALLMARK_HEDGEHOG_SIGNALING",
+                                             "HALLMARK_INTERFERON_GAMMA_RESPONSE"))
+
+  toplot <- reheat_de %>%
+      mutate(pipeline = paste0(filtering, '+', str_replace(de , 'NA\\+', ''))) %>%
+      dplyr::filter(pipeline %in% int_pipelines & study == int_dataset) %>%
+      dplyr::select(pipeline, stat, ID)  %>%
+      pivot_wider(names_from = pipeline, values_from = stat) 
+
+  toplot2 <- toplot %>%
+      mutate(filter_status = ifelse(is.na(`filtered+deseq2`),"filtered","unfiltered"),
+            `filtered+deseq2` = ifelse(is.na(`filtered+deseq2`),0,`filtered+deseq2`),
+            `unfiltered+edger` = ifelse(is.na(`unfiltered+edger`),0,`unfiltered+edger`))%>%
+      left_join(pick_HM, by=join_by(ID==target)) %>%
+      filter(ID %in% pick_HM$target)%>%
+      mutate(source = gsub("HALLMARK_","",source)) 
+
+  pw_const_genes_plot <- toplot2 %>% 
+    
+      ggplot( aes(x = !!sym(int_pipelines[1]), y = !!sym(int_pipelines[2]))) +
+      geom_point(alpha = 0.5, pch = 21,aes(fill = !!sym(int_pipelines[1]))) +
+      geom_point(data = filter(toplot2,filter_status=="filtered"), col="orange") +
+      scale_fill_gradient2(high =  'red',low = 'blue', mid = 'grey', midpoint = 0) +
+      geom_hline(yintercept = 0, linetype = 2, color="grey")+
+      geom_vline(xintercept = 0, linetype = 2, color="grey")+
+      stat_cor(method = 'spearman',label.x = -13,label.y = 16) +
+      ggtitle('Spurell19, PW-constituting genes') +
+      theme_cowplot() +
+      theme(legend.position = 'none')+facet_wrap(~ source)
+
+
+
+  box_comp_plot <- toplot2 %>% 
+      ggplot(aes(filter_status,!!sym(int_pipelines[1]),)) + geom_point() +
+      geom_boxplot() + facet_wrap(~source) + stat_compare_means() + theme_cowplot()+ 
+      ggtitle("T-score, unfiltered + edger pipeline") + xlab("") + ylab(" T-statistics")
+
+
+  p <- plot_grid(
+      plot_grid(pw_const_genes_plot, box_comp_plot, rel_widths = c(1, 1), nrow = 1, labels = c('A', 'B')),
+      nrow = 1
+  )
+}
+
+p <- plot_reheat_tscores(c('unfiltered+edger', 'filtered+deseq2'), 'Spurell19')
+
+ggsave('flop_results/plots/supp1.png', p,  width = 15, height = 10, dpi = 300)

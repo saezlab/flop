@@ -3,7 +3,7 @@ library(tidyverse)
 
 data <- readRDS('./unproc_data/MetaHeart/MetaHeart__counts.rds')
 
-# Preprocess the reheat datasets. Bear in mind that the covariates were individually removed, 
+# Preprocess the reheat datasets.
 # please check the manuscript for more information about this. Where the age column contained NAs, 
 # we filled those values with the average of the column. 
 

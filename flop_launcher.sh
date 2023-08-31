@@ -74,14 +74,13 @@ while getopts 'd:e:f:p:hts' OPTION; do
     s)
       studydata_downloader
       figures=true
-      
       data_folder="./flop_data/"
       n_thresh=30
       p_thresh=1
       echo "#Generating data as in the manuscript#"
       Rscript ./scripts/reheat_proc.R
-      # Rscript ./scripts/panacea_proc.R
-      # Rscript ./scripts/ccle_proc.R
+      Rscript ./scripts/panacea_proc.R
+      Rscript ./scripts/ccle_proc.R
       ;;
     f)
       n_thresh="$OPTARG"
@@ -96,6 +95,7 @@ while getopts 'd:e:f:p:hts' OPTION; do
 done
 if [ $OPTIND -eq 1 ]; then error_func; fi
 if [ -z $data_folder ]; then error_func; fi
+if [ -z $figures ]; then figures=false; fi
 if [ -z $n_thresh ]; then n_thresh=0; fi
 if [ -z $config_set ]; then config_set='desktop'; fi
 if [ -z $p_thresh ]; then p_thresh=1; fi
