@@ -47,7 +47,12 @@ testdata_downloader () {
   unzip -n test_data.zip -d ./test_data/test/ 
 }
 
-while getopts 'd:e:f:p:ht' OPTION; do
+studydata_downloader () {
+  curl -C - -O https://zenodo.org/record/8306225/files/flop_unproc_data.zip?download=1
+  unzip -n flop_unproc_data.zip -d ./
+}
+
+while getopts 'd:e:f:p:hts' OPTION; do
   case "$OPTION" in
     d)
       data_folder="$OPTARG"
@@ -65,6 +70,18 @@ while getopts 'd:e:f:p:ht' OPTION; do
       n_thresh=30
       p_thresh=0.05
       echo "##TEST MODE##"
+      ;;
+    s)
+      studydata_downloader
+      figures=true
+      
+      data_folder="./flop_data/"
+      n_thresh=30
+      p_thresh=1
+      echo "#Generating data as in the manuscript#"
+      Rscript ./scripts/reheat_proc.R
+      # Rscript ./scripts/panacea_proc.R
+      # Rscript ./scripts/ccle_proc.R
       ;;
     f)
       n_thresh="$OPTARG"
@@ -111,17 +128,18 @@ Pvalue cutoff for the top-bottom overlapping module: $p_thresh"
 # Run flop_benchmark
 
 
-if [ $config_set = "desktop" ]; then
-        echo "Running FLOP on a desktop computer..."
-        nextflow -C flop.config run flop_desktop.nf -profile standard -resume --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
-elif [ $config_set = "cluster" ]; then
-        echo "Running FLOP on a slurm-controlled cluster..."
-        nextflow -C flop.config run flop.nf -profile cluster --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
+if [ $config_set == "desktop" ] || [ $config_set == "cluster" ]; then
+        echo "Running FLOP on a $config_set..."
+        nextflow -C flop.config run flop.nf -resume -profile $config_set --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
 else
         echo "Valid options: desktop, cluster"
         error_func
 fi
 
+
+if [ $figures ]; then
+  Rscript ./scripts/figures.R
+fi
 
 if [ $? -eq 0 ] 
 then 

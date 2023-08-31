@@ -37,3 +37,7 @@ nextflow
 *.Rhistory
 *.Rproj
 *.Rproj.user
+*.qs
+*.sif
+*.sif
+flop_cont.sif

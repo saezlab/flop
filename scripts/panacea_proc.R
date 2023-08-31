@@ -5,7 +5,7 @@ source('https://raw.githubusercontent.com/martingarridorc/biokit/f5298742edaa311
 source('https://raw.githubusercontent.com/martingarridorc/biokit/f5298742edaa3118e22c3372e5ac1387024c492c/R/validators.R')
 #Directory settings
 db <- org.Hs.eg.db
-filenames <- list.files(path = "../unproc_data/GSE186341/", pattern = '*.csv', , full.names = T)
+filenames <- list.files(path = "./unproc_data/GSE186341/", pattern = '*.csv', , full.names = T)
 megacounts <- tibble()
 megacontrast <- tibble()
 megametadata <- tibble()
@@ -58,6 +58,6 @@ for(filename in filenames){
   megametadata <- rbind(megametadata, metadata)
 }
 
-write_tsv(megacounts, file = '../data/GSE186341/GSE186341__countdata.tsv')
-write_tsv(megacontrast, file = '../data/GSE186341/GSE186341__contrast.tsv')
-write_tsv(megametadata, file = '../data/GSE186341/GSE186341__metadata.tsv')
+write_tsv(megacounts, file = './flop_data/GSE186341/GSE186341__countdata.tsv')
+write_tsv(megacontrast, file = './flop_data/GSE186341/GSE186341__contrast.tsv')
+write_tsv(megametadata, file = './flop_data/GSE186341/GSE186341__metadata.tsv')

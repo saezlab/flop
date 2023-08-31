@@ -32,7 +32,7 @@ tissues <- thresh_meta %>%
 
 
 for (i in random_ident){
-  dir.create(paste("./data/CCLE_", i, "/", sep=''))
+  dir.create(paste("./flop_data/CCLE_", i, "/", sep=''))
   
   sampled_meta <- thresh_meta %>% 
     group_by(group) %>%
@@ -42,8 +42,8 @@ for (i in random_ident){
   sampled_data <- data %>% 
     dplyr::select(gene_symbol, sampled_meta$sample_ID)
 
-  count_name <- paste0("./data/CCLE_", i, "/CCLE_", i, '__countdata.tsv')
-  meta_name <- paste0("./data/CCLE_", i, "/CCLE_", i, '__metadata.tsv')
+  count_name <- paste0("./flop_data/CCLE_", i, "/CCLE_", i, '__countdata.tsv')
+  meta_name <- paste0("./flop_data/CCLE_", i, "/CCLE_", i, '__metadata.tsv')
   
   write_tsv(sampled_meta, meta_name)
   write_tsv(sampled_data, count_name)

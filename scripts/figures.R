@@ -5,11 +5,11 @@ library(cowplot)
 library(ggrepel)
 
 # reheat
-reheat_de <- read_tsv('flop_results/diffexp/reheat__deresults.tsv') %>%
+reheat_de <- read_tsv('./flop_results/diffexp/reheat__deresults.tsv') %>%
   pivot_longer(-ID) %>%
   separate(name, into = c('colid', 'filtering', 'de', 'contrast', 'dataset', 'study'), sep = '__') %>%
   pivot_wider(names_from = colid, values_from = value)
-full_df <- list.files('flop_results/funcomics/fullmerged/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
+full_df <- list.files('./flop_results/funcomics/fullmerged/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
   dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14"))
 similarity_df <- list.files('flop_results/funcomics/jaccard/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
   dplyr::filter(main_dataset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14"))
@@ -19,8 +19,8 @@ correlation_df <-  list.files('flop_results/funcomics/rank/', full.names = TRUE)
 # ccle and panacea
 panacea_spearman <- read_tsv('flop_results/funcomics/rank/GSE186341__total__rank.tsv')
 ccle_spearman <- read_tsv('flop_results/funcomics/rank/CCLE__total__rank.tsv')
-panacea_similarity <- read_tsv('flop_results/funcomics/jaccard/GSE186341__jaccard.tsv')
-ccle_similarity <- read_tsv('flop_results/funcomics/jaccard/CCLE__jaccard.tsv')
+panacea_similarity <- read_tsv('flop_results/funcomics/overlap/GSE186341__overlap.tsv')
+ccle_similarity <- read_tsv('flop_results/funcomics/overlap/CCLE__overlap.tsv')
 
 
 p_cutoff <- 0.05
@@ -119,11 +119,11 @@ plot_reheat_detailed <- function(int_pipelines, int_dataset) {
 }
 
 p <- plot_reheat_detailed( c('unfiltered+edger', 'filtered+deseq2'), 'Spurell19')
-ggsave('results/fig2.png', p,  width = 15, height = 10, dpi = 300)
+ggsave('flop_results/plots/fig2.png', p,  width = 15, height = 10, dpi = 300)
 supp1 <- plot_reheat_detailed(c('unfiltered+tmm+limma', 'filtered+tmm+limma'), 'Spurell19')
-ggsave('results/supp1.png', supp1,  width = 15, height = 10, dpi = 300)
+ggsave('flop_results/plots/supp1.png', supp1,  width = 15, height = 10, dpi = 300)
 supp2 <- plot_reheat_detailed(c('unfiltered+edger', 'filtered+deseq2'), 'Yang14')
-ggsave('results/supp2.png', supp2,  width = 15, height = 10, dpi = 300)
+ggsave('flop_results/plots/supp2.png', supp2,  width = 15, height = 10, dpi = 300)
 
 #### fig 3 ####
 correlation_toplot <- correlation_df %>%
@@ -146,7 +146,7 @@ p <- ggplot(correlation_toplot, aes(x = pipeline_a, y = pipeline_b, size = -spea
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-ggsave('results/fig3a.png', p, width = 12, height = 10, dpi = 300)
+ggsave('flop_results/plots/fig3a.png', p, width = 12, height = 10, dpi = 300)
 
 # values for text
 correlation_toplot %>% 
@@ -217,7 +217,7 @@ p <- ggplot(similarity_toplot, aes(x = pipeline_a, y = pipeline_b, size = -simil
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-ggsave('results/fig4a.png', p, width = 12, height = 10, dpi = 300)
+ggsave('flop_results/plots/fig4a.png', p, width = 12, height = 10, dpi = 300)
 
 # values for text
 similarity_toplot %>% 
@@ -274,7 +274,7 @@ p <- ggplot(toplot, aes(x = name, y = value)) +
   stat_compare_means(method = 'wilcox.test', paired = TRUE, comparisons = list(c('correlation', 'similarity'))) +
   theme_cowplot()
 
-ggsave('results/suppfig3.png', p, width = 5, height = 5, dpi = 300)
+ggsave('flop_results/plots/suppfig3.png', p, width = 5, height = 5, dpi = 300)
 
 #### fig 5 ####
 spearman_df <- bind_rows(ccle = ccle_spearman, panacea = panacea_spearman, .id = 'dataset') %>%
@@ -296,7 +296,7 @@ p <- ggplot(spearman_df, aes(x = pipeline_a, y = pipeline_b, size = -spearman_se
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
 
-ggsave('results/fig5.png', p, width = 14, height = 8, dpi = 300)
+ggsave('flop_results/plots/fig5.png', p, width = 14, height = 8, dpi = 300)
 
 similarity_df <- bind_rows(ccle = ccle_similarity, panacea = panacea_similarity, .id = 'dataset') %>%
   mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
