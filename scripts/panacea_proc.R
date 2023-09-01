@@ -39,15 +39,16 @@ for(filename in filenames){
   }
   # Filter out the untreated samples
   metadata <- samplenames %>% 
-    filter(drug!='UNTREATED')
+    dplyr::filter(drug != 'UNTREATED') %>%
+    dplyr::select(sample_ID, group)
   
   genecounts <- translated_data %>% 
     dplyr::select(gene_symbol, as.vector(metadata$sample_ID)) 
   
   megacounts <- megacounts %>% inner_join(genecounts, by='gene_symbol')
 
-  treatments <- metadata %>% 
-    filter(drug != "DMSO") %>%
+  treatments <- samplenames %>% 
+    dplyr::filter(!drug %in% c('DMSO', 'UNTREATED')) %>%
     distinct(group) %>% 
     pull()
  
@@ -57,7 +58,8 @@ for(filename in filenames){
   megacontrast <- rbind(megacontrast, contrast_mat)
   megametadata <- rbind(megametadata, metadata)
 }
-
+dir.create('./flop_data')
+dir.create('./flop_data/GSE186341/')
 write_tsv(megacounts, file = './flop_data/GSE186341/GSE186341__countdata.tsv')
 write_tsv(megacontrast, file = './flop_data/GSE186341/GSE186341__contrast.tsv')
 write_tsv(megametadata, file = './flop_data/GSE186341/GSE186341__metadata.tsv')

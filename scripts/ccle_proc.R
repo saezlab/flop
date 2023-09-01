@@ -11,15 +11,16 @@ n=1
 random_ident <- ID_gen(n)
 
 
-countfile <- list.files(path = "./unproc_data/CCLE/", pattern = '*.gct', full.names = T)
+countfile <- list.files(path = "./unproc_data/CCLE/", pattern = '*.gct$', full.names = T)
 
-data <- read_tsv(countfile, name_repair = make.names)  %>% dplyr::rename('gene_symbol'='Description') %>% dplyr::select(-Name) 
-data_samples <- colnames(data)[-1]
+data_ccle <- read_tsv(countfile, name_repair = make.names)  %>% dplyr::rename('gene_symbol'='Description') %>% dplyr::select(-Name) 
+data_samples <- colnames(data_ccle)[-1]
 
 metadata <- data_samples %>% 
   as_tibble() %>%
   separate(value, c('cell_line', 'group'), sep='_', extra='merge', remove=F) %>%
-  dplyr::rename('sample_ID'='value')
+  dplyr::rename('sample_ID'='value') %>%
+  select(sample_ID, group)
 
 thresh_meta <- metadata %>%
   group_by(group) %>%
@@ -30,16 +31,15 @@ tissues <- thresh_meta %>%
   distinct() %>%
   pull()
 
-
+dir.create('./flop_data')
 for (i in random_ident){
   dir.create(paste("./flop_data/CCLE_", i, "/", sep=''))
   
   sampled_meta <- thresh_meta %>% 
     group_by(group) %>%
-    print() %>% 
     slice_sample(n=20)
   
-  sampled_data <- data %>% 
+  sampled_data <- data_ccle %>% 
     dplyr::select(gene_symbol, sampled_meta$sample_ID)
 
   count_name <- paste0("./flop_data/CCLE_", i, "/CCLE_", i, '__countdata.tsv')

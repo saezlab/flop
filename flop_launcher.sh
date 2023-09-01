@@ -35,7 +35,7 @@ For more information, please refer to the README file.
 "
 
 error_func () {
-  echo "script usage: flop_launcher.sh [-d data_folder] [-e] [-a somevalue]" >&2
+  echo "script usage: flop_launcher.sh [-d data_folder] [-e] [...]" >&2
   echo "Try 'flop_launcher.sh -h' for more information." >&2
   exit 1
 }
@@ -52,7 +52,7 @@ studydata_downloader () {
   unzip -n flop_unproc_data.zip -d ./
 }
 
-while getopts 'd:e:f:p:hts' OPTION; do
+while getopts 'd:e:f:p:hst' OPTION; do
   case "$OPTION" in
     d)
       data_folder="$OPTARG"
@@ -130,7 +130,7 @@ Pvalue cutoff for the top-bottom overlapping module: $p_thresh"
 
 if [ $config_set == "desktop" ] || [ $config_set == "cluster" ]; then
         echo "Running FLOP on a $config_set..."
-        nextflow -C flop.config run flop.nf -resume -profile $config_set --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
+        nextflow -C flop.config run flop.nf -profile $config_set --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
 else
         echo "Valid options: desktop, cluster"
         error_func
