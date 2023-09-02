@@ -220,7 +220,8 @@ wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.m
 
 #### fig 4 ####
 similarity_toplot <- similarity_df %>%
-  mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
   dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
   dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat') %>%
   group_by(id, resource) %>%
@@ -300,15 +301,16 @@ ggsave('flop_results/plots/supp4.png', p, width = 5, height = 5, dpi = 300)
 
 #### fig 5 ####
 spearman_df <- bind_rows(ccle = ccle_spearman, panacea = panacea_spearman, .id = 'dataset') %>%
-  mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
   dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
   group_by(dataset, id, resource) %>%
   summarise(spearman_average = mean(value), spearman_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
   dplyr::filter(pipeline_a != pipeline_b) %>%
-  mutate(pipeline_a = factor(pipeline_a, levels = sort(unique(pipeline_a))),
-         pipeline_b = factor(pipeline_b, levels = sort(unique(pipeline_b)))) 
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b)))) 
 
 p <- ggplot(spearman_df, aes(x = pipeline_a, y = pipeline_b, size = -spearman_sem, fill = spearman_average)) +
   geom_point(pch = 21) +
@@ -321,15 +323,16 @@ p <- ggplot(spearman_df, aes(x = pipeline_a, y = pipeline_b, size = -spearman_se
 ggsave('flop_results/plots/fig5.png', p, width = 14, height = 8, dpi = 300)
 
 similarity_df <- bind_rows(ccle = ccle_similarity, panacea = panacea_similarity, .id = 'dataset') %>%
-  mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
   dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
   group_by(dataset, id, resource) %>%
   summarise(similarity_average = mean(value), similarity_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
   dplyr::filter(pipeline_a != pipeline_b) %>%
-  mutate(pipeline_a = factor(pipeline_a, levels = sort(unique(pipeline_a))),
-         pipeline_b = factor(pipeline_b, levels = sort(unique(pipeline_b))))
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
 
 p <- ggplot(similarity_df, aes(x = pipeline_a, y = pipeline_b, size = -similarity_sem, fill = similarity_average)) +
   geom_point(pch = 21) +
@@ -345,7 +348,7 @@ spearman_df %>%
   mutate(unfil_limma_b = ifelse(pipeline_b == 'unfiltered-vsn+limma', 'Yes', 'No')) %>%
   mutate(unfil_limma = ifelse(unfil_limma_a == 'Yes' | unfil_limma_b == 'Yes', 'Yes', 'No')) %>%
   group_by(unfil_limma, resource) %>%
-  summarise(mean(similarity_average))
+  summarise(mean(spearman_average))
 
 similarity_toplot %>% 
   mutate(unfiltered_limma_a = ifelse(grepl('unfiltered', pipeline_a) & grepl('limma', pipeline_a), 'Yes', 'No')) %>%
@@ -359,7 +362,7 @@ similarity_toplot %>%
   mutate(unfil_deseq_edger_b =  ifelse(grepl('unfiltered', pipeline_b) & (grepl('edger', pipeline_b) | grepl('deseq2', pipeline_b)), 'Yes', 'No')) %>%
   mutate(unfil_deseq_edger = ifelse(unfil_deseq_edger_a == 'Yes' & unfil_deseq_edger_b == 'Yes', 'Yes', 'No')) %>%
   group_by(unfil_deseq_edger, resource) %>%
-  summarise(mean(spearman_average))
+  summarise(mean(similarity_average))
 
 ## Supp figure
 
