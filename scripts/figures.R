@@ -125,22 +125,46 @@ ggsave('flop_results/plots/supp2.png', supp1,  width = 15, height = 10, dpi = 30
 supp2 <- plot_reheat_detailed(c('unfiltered+edger', 'filtered+deseq2'), 'Yang14')
 ggsave('flop_results/plots/supp3.png', supp2,  width = 15, height = 10, dpi = 300)
 
+custom_sort <- function(x) {
+  
+  # Split the vector based on "filtered" and "unfiltered"
+  filtered <- x[grep("^filtered", x)]
+  unfiltered <- x[grep("unfiltered", x)]
+  
+  # Within the filtered group, sort strings containing "NA" first
+  filtered_nas <- sort(filtered[grep("-NA+", filtered)])
+  filtered_non_nas <- sort(filtered[!filtered %in% filtered_nas])
+  
+  # Within the unfiltered group, sort strings containing "NA" first
+  unfiltered_nas <- sort(unfiltered[grep("-NA+", unfiltered)])
+  unfiltered_non_nas <- sort(unfiltered[!unfiltered %in% unfiltered_nas])
+
+
+  # Combine all sorted vectors
+  c(filtered_nas, filtered_non_nas, unfiltered_nas, unfiltered_non_nas)
+}
+
+
+custom_sort(c('filtered-NA+', 'unfiltered-log1quant+limma'))
+
 #### fig 3 ####
 correlation_toplot <- correlation_df %>%
-  mutate(id = paste0(pmin(feature_1, name), ' - ', pmax(feature_1, name))) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
   dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
   group_by(id, resource) %>%
   summarise(spearman_average = mean(value), spearman_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
   dplyr::filter(pipeline_a != pipeline_b) %>%
-  mutate(pipeline_a = factor(pipeline_a, levels = sort(unique(pipeline_a))),
-         pipeline_b = factor(pipeline_b, levels = sort(unique(pipeline_b))))
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
+
 
 p <- ggplot(correlation_toplot, aes(x = pipeline_a, y = pipeline_b, size = -spearman_sem, fill = spearman_average)) +
   geom_point(pch = 21) +
   scale_fill_viridis_c(option = "plasma", limits = c(0, 1)) +
-  facet_wrap( vars(resource)) +
+  facet_wrap(vars(resource)) +
   xlab('Pipeline A') + ylab('Pipeline B') +
   guides(x = guide_axis(angle = 60)) +
   theme_cowplot() 
@@ -204,9 +228,8 @@ similarity_toplot <- similarity_df %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
   dplyr::filter(pipeline_a != pipeline_b) %>%
-  
-  mutate(pipeline_a = factor(pipeline_a, levels = sort(unique(pipeline_a))),
-         pipeline_b = factor(pipeline_b, levels = sort(unique(pipeline_b))))
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
 
 p <- ggplot(similarity_toplot, aes(x = pipeline_a, y = pipeline_b, size = -similarity_sem, fill = similarity_average)) +
   geom_point(pch = 21) +
