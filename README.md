@@ -14,7 +14,7 @@ git clone https://github.com/saezlab/flop
 
 To run FLOP, you need to have conda installed in your computer. Please check [this link](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) to learn how to install conda.
 
-This command will install the necessary dependencies inside an environment.
+This command will install the necessary dependencies inside a dedicated environment.
 
 ```bash
 cd flop/
@@ -37,22 +37,29 @@ bash flop_launcher.sh -t
 Mode of usage:
 
 ```bash
-bash flop_launcher.sh [-d data folder] [-e config set][-p pvalue threshold] [-f n DE genes threshold] [-t] [-h]
+bash flop_launcher.sh [-d data folder] [-e config set][-p pvalue threshold] [-f n DE genes threshold] [-t] [-s] [-h]
 ```
 
 FLOP has several ways of personalization. These are all possible input parameters:
 
 - -d: data folder, containing the subfolders with the datasets to be analyzed
-- -e: config set, either 'desktop' or 'cluster'
+- -e: config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
 - -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
 - -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
 - -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis. Default is 0 (no filtering).
+- -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets, and then outputs the figures also shown in the study. It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. It is strongly advised to run this setup within a HPC environment (config set = cluster).
 - -h: shows this help message
 
 You can run FLOP with the minimal settings by using this command:
 
 ```bash
-bash flop_launcher.sh [-d data_folder] [-e config_set]
+bash flop_launcher.sh [-d data_folder]
+```
+
+To run the analysis showed in the study using PANACEA, CCLE and ReHeat (it is recommended to run it in a HPC environment):
+
+```bash
+bash flop_launcher.sh -s -e cluster
 ```
 
 # Input
@@ -66,13 +73,13 @@ FLOP works with two or three different files. Each different dataset folder shou
 		./GSE186341__metadata.tsv
 		./GSE186341__contrast.tsv
 	./Reheat_subset1/
-		./Reheat_subset1__countdata.tsv
-		./Reheat_subset1__metadata.tsv
-		./Reheat_subset1__contrast.tsv
-	./Reheat_subset2/
-		./Reheat_subset2__countdata.tsv
-		./Reheat_subset2__metadata.tsv
-		./Reheat_subset2__contrast.tsv
+		./Reheat_study1__countdata.tsv
+		./Reheat_study1__metadata.tsv
+		./Reheat_study1__contrast.tsv
+	./Reheat_study2/
+		./Reheat_study2__countdata.tsv
+		./Reheat_study2__metadata.tsv
+		./Reheat_study2__contrast.tsv
 	./CCLE/
 		./CCLE__countdata.tsv
 		./CCLE__metadata.tsv
