@@ -85,8 +85,8 @@ while getopts 'd:e:f:p:hst' OPTION; do
       p_thresh=1
       echo "#Generating data as in the manuscript#"
       Rscript ./scripts/reheat_proc.R
-      Rscript ./scripts/panacea_proc.R
-      Rscript ./scripts/ccle_proc.R
+      # Rscript ./scripts/panacea_proc.R
+      # Rscript ./scripts/ccle_proc.R
       ;;
     f)
       n_thresh="$OPTARG"
@@ -115,7 +115,6 @@ else
 fi
 
 parent_folder=$(dirname $data_folder)
-num_dirs=$(ls -ld "$data_folder"* | awk '{print $NF}' | rev | cut -d "/" -f1 | rev | cut -d "/" -f3 | wc -l)
 name_datasets=$(ls -ld "$data_folder"* | awk '{print $NF}' | rev | cut -d "/" -f1 | rev | sort | uniq | tr '\n' ' ')
 
 # Ask if config is correct, if not, exit
@@ -126,7 +125,6 @@ echo "
 ##SETTINGS##
 Running option: $config_set
 Data folder: $data_folder
-Number of subsets found: $num_dirs
 Datasets found: $name_datasets
 Minimum number of significant genes per contrast: $n_thresh
 Pvalue cutoff for the top-bottom overlapping module: $p_thresh"
