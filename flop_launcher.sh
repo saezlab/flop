@@ -52,6 +52,11 @@ studydata_downloader () {
   unzip -n flop_unproc_data.zip -d ./
 }
 
+pksource_downloader () {
+  curl -C - -O https://zenodo.org/record/8314350/files/flop_pkresources_31082023.zip?download=1
+  unzip -o flop_pkresources_31082023.zip -d ./scripts
+}
+
 while getopts 'd:e:f:p:hst' OPTION; do
   case "$OPTION" in
     d)
@@ -73,7 +78,8 @@ while getopts 'd:e:f:p:hst' OPTION; do
       ;;
     s)
       studydata_downloader
-      figures=true
+      pksource_downloader
+      paper_mode=true
       data_folder="./flop_data/"
       n_thresh=30
       p_thresh=1
@@ -95,7 +101,7 @@ while getopts 'd:e:f:p:hst' OPTION; do
 done
 if [ $OPTIND -eq 1 ]; then error_func; fi
 if [ -z $data_folder ]; then error_func; fi
-if [ -z $figures ]; then figures=false; fi
+if [ -z $paper_mode ]; then paper_mode=false; fi
 if [ -z $n_thresh ]; then n_thresh=0; fi
 if [ -z $config_set ]; then config_set='desktop'; fi
 if [ -z $p_thresh ]; then p_thresh=1; fi
@@ -137,8 +143,11 @@ else
 fi
 
 
-if [ $figures ]; then
+
+if [ $paper_mode ]; then
   Rscript ./scripts/figures.R
+  rm -r flop_pkresources_31082023.zip
+  rm -r ./scripts/dc_resources
 fi
 
 if [ $? -eq 0 ] 
