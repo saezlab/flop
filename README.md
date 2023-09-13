@@ -1,5 +1,5 @@
 # README
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8340893.svg)](https://doi.org/10.5281/zenodo.8340893)
 # Description
 
 FLOP is a unified workflow that analyses bulk RNA-seq counts using multiple combinations of filtering, normalisation and differential expression methods. It then evaluates the differences in the functional space between the different combinations of methods. 
