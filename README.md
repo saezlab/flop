@@ -44,7 +44,7 @@ FLOP has several ways of personalization. These are all possible input parameter
 
 - -d: data folder, containing the subfolders with the datasets to be analyzed
 - -e: config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
-- -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
+- -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you might still need to specify a config set with -e
 - -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
 - -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis. Default is 0 (no filtering).
 - -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets, and then outputs the figures also shown in the study. It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. It is strongly advised to run this setup within a HPC environment (config set = cluster).
