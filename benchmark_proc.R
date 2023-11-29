@@ -4,14 +4,12 @@ dir.create('benchmark_data', showWarnings = FALSE)
 
 main_datasets <- c('Simonson2023', 'Armute2023', 'Chaffin2022', 'Koenig2022', 'Kuppe2022', 'Reichart2022')
 
-list('Simonson2023' = c('heart_failure', 'sex', 'age'),
+covariates <- list('Simonson2023' = c('heart_failure', 'sex', 'age'),
 'Armute2023' = c('condition', 'heart_failure'),
 'Chaffin2023' = c('heart_failure', 'sex', 'age'),
 'Koenig2022' = c('heart_failure'),
 'Kuppe2022' = c('sex', 'patient_group'),
-'')
-
-
+'Reichart' = c('sex', 'heart_failure'))
 
 for(main_dataset in main_datasets){
 
@@ -21,11 +19,8 @@ for(main_dataset in main_datasets){
         grep(pattern='coldata', ., value = TRUE) %>% 
         read_csv() %>% 
         .[,-1]
-    counts <- files_list %>% grep(pattern='pbulk', ., value = TRUE) %>% read_csv() %>% column_to_rownames('...1') %>% t(.) %>% as.data.frame(.) %>% rownames_to_column('gene_symbol') %>% as_tibble()
-    # count number of columns -1
-    length(counts) - 1
-    old_metadata %>% 
-        nrow()
+    counts <- files_list %>% grep(pattern='pbulk', ., value = TRUE) %>% read_csv() %>% {if('sample_id' %in% colnames(.)) column_to_rownames(., 'sample_id') else column_to_rownames(., '...1')} %>%
+        t(.) %>% as.data.frame(.) %>% rownames_to_column('gene_symbol') %>% as_tibble()
 
     cell_types <- old_metadata %>% 
         pull(cell_type) %>% 
@@ -37,7 +32,7 @@ for(main_dataset in main_datasets){
                 cell_type == !!cell_type ~ !!cell_type,
                 cell_type != !!cell_type ~ paste0('No', !!cell_type)
             )) %>% 
-            select(colname, group, heart_failure, sex, age) %>%
+            select(colname, group, !!covariates[[main_dataset]]) %>%
             dplyr::rename('sample_ID' = 'colname')
 
         contrasts <- tibble(
