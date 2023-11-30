@@ -5,7 +5,7 @@ dir.create('benchmark_data', showWarnings = FALSE)
 main_datasets <- c('Simonson2023', 'Armute2023', 'Chaffin2022', 'Koenig2022', 'Kuppe2022', 'Reichart2022')
 
 covariates <- list('Simonson2023' = c('heart_failure', 'sex', 'age'),
-'Armute2023' = c('condition', 'heart_failure'),
+'Armute2023' = c('heart_failure'),
 'Chaffin2023' = c('heart_failure', 'sex', 'age'),
 'Koenig2022' = c('heart_failure'),
 'Kuppe2022' = c('sex', 'patient_group'),
@@ -59,3 +59,6 @@ for(main_dataset in main_datasets){
 
     }
 }
+
+
+
