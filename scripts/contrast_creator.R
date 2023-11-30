@@ -38,7 +38,8 @@ if (length(contrast_file) != 0){
       summarise_all(sum)
 
     sel_metadata <- metadata %>%
-      filter(sample_ID %in% sel_samples)
+      filter(sample_ID %in% sel_samples) # %>%
+      # arrange(factor(group, levels = sel_groups))
 
     contrast_name <- paste(sel_groups[1],'_v_', sel_groups[2], sep = '')
     count_name <- paste(subset_id, contrast_name, 'countdata.qs', sep = '__')

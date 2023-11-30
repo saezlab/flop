@@ -24,7 +24,8 @@ source(paste0(path_file, "diffexp_helper.R"))
 source(paste0(path_file, "filtering_helper.R"))
 
 counts <- qread(counts_file)
-metadata <- qread(meta_file) %>% mutate(group = factor(group))
+groups_sorting <- biocontext %>% strsplit("_v_") %>% unlist()
+metadata <- qread(meta_file) %>% mutate(group = factor(group, levels = groups_sorting))
 
 if (status == 'filtered') {
     filt_func <- get('filtering')
