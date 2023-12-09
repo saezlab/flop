@@ -42,3 +42,6 @@ nextflow
 *.sif
 flop_cont.sif
 benchmark/*
+benchmark_data/*
+*.xlsx
+*.Identifier
