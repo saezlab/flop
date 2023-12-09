@@ -4,7 +4,7 @@ import decoupler as dc
 # Gets the three Prior Knowledge sources from the OmniPath database via decoupleR and outputs them as tsv files. 
 progeny = dc.get_progeny(organism='human')
 dorothea = dc.get_dorothea(organism='human')
-msigdb = dc.get_resource('MSigDB', organism='10090')
+msigdb = dc.get_resource('MSigDB', organism='human')
 collectri = dc.get_collectri(organism='human', split_complexes=False)
 
 msigdb_hallmarks = msigdb.loc[msigdb['collection'] == 'hallmark'].rename(columns={'genesymbol':'target', 'geneset':'source'}).drop_duplicates()
