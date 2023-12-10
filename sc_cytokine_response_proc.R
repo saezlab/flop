@@ -8,6 +8,9 @@ full_counts <- tibble(gene_symbol= character())
 full_meta <- tibble()
 full_contrast <- tibble()
 
+# MSIGDB hallmarks mouse gene sets:
+
+
 for(file in files){
     seu.s <- readRDS(file)
     seu.s@meta.data <- seu.s@meta.data %>% mutate(celltype = gsub('_', '', celltype),
@@ -80,11 +83,10 @@ metadata %>%
   	scale_x_log10() + 
   	cowplot::theme_cowplot() +
   	ylab("Cell density") +
-  	geom_vline(xintercept = 500)
+  	geom_vline(xintercept = 500, linetype = 'dashed') +
+    theme(text = element_text(family='Calibri'), legend.position = 'none')
 
 # 87 treatments
-systemfonts
-
 # metadata %>%
 #   	ggplot(aes(x=log10GenesPerUMI, color = sample, fill=sample)) +
 #   	geom_density(alpha = 0.2) +
@@ -125,7 +127,20 @@ full_qc_data %>%
     ggplot(aes(x = ncells, y = counts, color = celltype)) +
     geom_point() +
     cowplot::theme_cowplot() +
-    scale_y_log10() +
     theme(text = element_text(family='Calibri')) +
     geom_hline(yintercept = 1000) +
     geom_vline(xintercept = 10)
+
+full_qc_data %>% group_by(celltype) %>% filter(sample=='PBS') %>% summarise(n=n())
+
+
+# per celltype, if there are no pbs samples, remove all rows containing cell type
+full_qc_data %>% filter(ncells > 10, counts > 1000) %>%
+    group_by(celltype) %>%
+    mutate(pbs = ifelse(sample == 'PBS', 1, 0)) %>%
+    summarise(pbs = sum(pbs)) %>%
+    filter(pbs != 0) %>%
+    pull(celltype) %>%
+    unique()
+
+
