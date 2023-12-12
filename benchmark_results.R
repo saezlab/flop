@@ -432,3 +432,212 @@ tfs_results %>%
     scale_y_continuous(breaks=seq(0, 1, 0.2), limits=c(0,1))
 
 
+
+
+
+# BENCHMARK 3: cytokines associated to hallmarks
+# read in the cytokine activity data
+cytokine_results <- read_tsv('./flop_results/funcomics/fullmerged/Atlascyt__fullmerge.tsv') %>%
+    filter(resource == 'hallmarks_mouse', statparam == 'stat') %>%
+    separate(bio_context, into = c('cell_type', 'rm'), sep = '_v_', remove=FALSE) %>%
+    separate(cell_type, into = c('cell_type', 'true_cytokine'), sep = '_') %>%
+    select(-rm)
+
+
+celltypes_cytokines <- cytokine_results %>% pull(bio_context) %>% unique() %>% strsplit(., split = '_v_') %>% unlist() %>% tibble('bio_context'=.) %>% separate(bio_context, into=c('cell_type', 'pred_cytokine'), remove=TRUE) %>% distinct()
+
+cytokine_hallmark_association <- read_tsv('unproc_data/hallmarks/GSE202186_map-scRNAseq-cytokines-dictionary.txt') %>% select(cytokine, hallmark) %>% distinct() %>% filter(!is.na(hallmark)) %>% dplyr::rename('true_hallmark' = 'hallmark') %>% distinct()
+    # substitute the alpha hallmark
+    # mutate(true_hallmark = ifelse(str_detect(true_hallmark, 'GAMMA'), 'HALLMARK_INTERFERON_ALPHA_RESPONSE', true_hallmark)) %>% distinct()
+
+# plot number of cytokines per hallmark
+cytokine_hallmark_association %>%
+    group_by(true_hallmark) %>%
+    count() %>%
+    arrange(desc(n)) %>%
+    ggplot(aes(x = true_hallmark, y = n, fill = true_hallmark)) +
+    geom_bar(stat = 'identity') +
+    theme_cowplot() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(x = 'Hallmark', y = 'Number of cytokines', title = 'Number of cytokines per hallmark') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+
+cytokine_results <- full_join(cytokine_results, cytokine_hallmark_association, by = c('true_cytokine' = 'cytokine'))
+
+selected_hallmarks <- cytokine_hallmark_association %>% pull(true_hallmark) %>% unique()
+
+cytokines_data_subset <- cytokine_results %>%
+    mutate(pipeline=paste0(status, '_', pipeline)) %>%
+    group_by(main_dataset, bio_context, pipeline, status) %>%
+    filter(items %in% selected_hallmarks) %>%
+    filter(!is.na(true_hallmark)) %>%
+    mutate(is_tp = ifelse(true_hallmark == items, 1, 0))
+
+means <- cytokines_data_subset %>%
+    group_by(true_hallmark, items) %>%
+    summarize(mean_act = mean(act, na.rm = TRUE)) %>%
+    ungroup()
+
+p <- cytokines_data_subset %>%
+    ggplot(aes(x = act, fill = items)) +
+    geom_density(alpha = 0.2) +
+    theme_cowplot() +
+    theme(text = element_text(family='Calibri'), legend.position = 'none') +
+    facet_wrap(true_hallmark~items)
+
+mean_labels <- means %>%
+    mutate(label = paste("Mean =", round(mean_act, 2)),
+            y_pos = 0.45) 
+         
+p + geom_text(data = mean_labels, aes(x = mean_act, y = y_pos, label = label), 
+              size = 3, vjust = "top", color = "black")
+
+
+roc_tibble <- cytokines_data_subset %>%
+    group_by(pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        pipeline <- x$pipeline %>% unique()
+        roc_datapoints <- ROCR::performance(PR_object, measure = "tpr", x.measure = "fpr")
+        roc_tibble <- tibble(pipeline = pipeline, fpr = roc_datapoints@x.values[[1]], tpr = roc_datapoints@y.values[[1]])
+        return(roc_tibble)
+    }) %>% bind_rows()
+
+roc_tibble %>%
+    ggplot(aes(x = fpr, y = tpr, color = pipeline, label = pipeline)) +
+    geom_line() +
+    geom_abline(slope = 1, intercept = 0, linetype = 'dashed') +
+    theme_cowplot() +
+    labs(x = 'False positive rate', y = 'True positive rate', title = 'ROC curves') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri')) 
+
+# compute PR curves, plot
+baseline_auprc_hallmarks <- cytokines_data_subset %>% 
+    ungroup() %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        number_positives <- x %>% filter(is_tp == 1) %>% nrow()
+        total_number <- x %>% nrow()
+        baseline <- number_positives / total_number
+        return(baseline)
+    }) %>% unlist()
+
+
+prc_tibble <- cytokines_data_subset %>%
+    group_by(pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        pipeline <- x$pipeline %>% unique()
+        roc_datapoints <- ROCR::performance(PR_object, measure = "prec", x.measure = "rec")
+        roc_tibble <- tibble(pipeline = pipeline, rec = roc_datapoints@x.values[[1]], prec = roc_datapoints@y.values[[1]])
+        return(roc_tibble)
+    }) %>% bind_rows()
+
+prc_tibble %>%
+    ggplot(aes(x = rec, y = prec, color = pipeline, label = pipeline)) +
+    geom_line() +
+    geom_hline(yintercept = baseline_auprc_hallmarks, linetype = 'dashed') +
+    theme_cowplot() +
+    ylim(0, 1) +
+    xlim(0, 1) +
+    labs(x = 'Recall', y = 'Precision', title = 'Precision-recall curves') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri')) 
+
+hallmarks_groundtruth_results_auc <- cytokines_data_subset %>%
+    group_by(pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        auc_obj <- ROCR::performance(PR_object, measure = "auc")
+        pipeline <- x$pipeline %>% unique()
+        # add row to auc_tibble
+        auc_tibble <- tibble(pipeline = pipeline, auc = auc_obj@y.values[[1]])
+        return(auc_tibble)
+    }) %>% bind_rows() 
+
+hallmarks_groundtruth_results_auprc <- cytokines_data_subset %>%
+    group_by(pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        auprc_obj <- ROCR::performance(PR_object, measure = "aucpr")
+        pipeline <- x$pipeline %>% unique()
+        # add row to auc_tibble
+        auc_tibble <- tibble(pipeline = pipeline, auprc = auprc_obj@y.values[[1]])
+        return(auc_tibble)
+    }) %>% bind_rows() 
+
+hallmarks_results <- left_join(hallmarks_groundtruth_results_auc, hallmarks_groundtruth_results_auprc, by = c('pipeline'))   
+
+order_pipelines_auc <- hallmarks_results %>% arrange(desc(auc)) %>% pull(pipeline)
+
+#scatter
+hallmarks_results %>%
+    mutate(pipeline = factor(pipeline, levels = order_pipelines_auc)) %>%
+    ggplot(aes(x = auc, y = auprc, color = pipeline, label = pipeline)) +
+    geom_point() +
+    ggrepel::geom_text_repel(size = 5, family = 'Calibri') +
+    theme_cowplot() +
+    labs(x = 'AUC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+
+
+hallmarks_groundtruth_results_auc <- cytokines_data_subset %>%
+    group_by(cell_type, pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        auc_obj <- ROCR::performance(PR_object, measure = "auc")
+        pipeline <- x$pipeline %>% unique()
+        # add row to auc_tibble
+        auc_tibble <- tibble(cell_type = unique(x$cell_type), pipeline = pipeline, auc = auc_obj@y.values[[1]])
+        return(auc_tibble)
+    }) %>% bind_rows() 
+
+hallmarks_groundtruth_results_auprc <- cytokines_data_subset %>%
+    group_by(cell_type, pipeline) %>%
+    arrange(desc(act), .by_group = TRUE) %>%
+    group_split() %>%
+    purrr::map(., function(x){
+        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
+        auprc_obj <- ROCR::performance(PR_object, measure = "aucpr")
+        pipeline <- x$pipeline %>% unique()
+        # add row to auc_tibble
+        auc_tibble <- tibble(cell_type = unique(x$cell_type), pipeline = pipeline, auprc = auprc_obj@y.values[[1]])
+        return(auc_tibble)
+    }) %>% bind_rows() 
+
+hallmarks_results <- left_join(hallmarks_groundtruth_results_auc, hallmarks_groundtruth_results_auprc, by = c('cell_type', 'pipeline'))   
+#boxplots
+hallmarks_results %>%
+    mutate(pipeline = fct_reorder(pipeline, auc)) %>%
+    ggplot(aes(x = pipeline, y = auc, fill = pipeline)) +
+    geom_boxplot() +
+    theme_cowplot() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    geom_hline(yintercept = 0.5, linetype = 'dashed') +
+    ylim(0.5, 1) +
+    labs(x = 'Pipeline', y = 'AUC', title = 'AUROC per dataset and pipeline') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+
+hallmarks_results %>%
+    mutate(pipeline = fct_reorder(pipeline, auc)) %>%
+    ggplot(aes(x = pipeline, y = auprc, fill = pipeline)) +
+    geom_boxplot() +
+    theme_cowplot() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    geom_hline(yintercept = baseline_auprc_hallmarks, linetype = 'dashed') +
+    labs(x = 'Pipeline', y = 'AUPRC', title = 'AUPRC per dataset and pipeline') +
+    theme(plot.title = element_text(hjust = 0.5), 
+        text = element_text(family='Calibri'), 
+        legend.position = 'none') +
+    scale_y_continuous(breaks=seq(0, 1, 0.2), limits=c(0,1))
+
+
