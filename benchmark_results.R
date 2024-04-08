@@ -2,6 +2,9 @@ library(tidyverse)
 library(ROCR)
 library(cowplot)
 
+library(egg)
+library(ggforce)
+
 # data exploration 
 raw_metadata <- list.files(path='./benchmark/coldata', pattern='coldata.csv', full.names=TRUE) %>%
     purrr::map(., function(x){
@@ -10,7 +13,7 @@ raw_metadata <- list.files(path='./benchmark/coldata', pattern='coldata.csv', fu
         return(df)
     }) %>% bind_rows()
 
-num_samples <- raw_metadata %>% distinct(sample_id, dataset) %>% group_by(dataset) %>% summarise(n = n()) %>% arrange(desc(n)) %>% mutate(dataset = fct_reorder(dataset, n))
+num_samples <- raw_metadata %>% distinct(sample_id, dataset) %>% group_by(dataset) %>% summarise(n = n()) %>% arrange(desc(n))
 
 ggplot(num_samples, aes(x = dataset, y = n, fill=dataset)) +
     geom_bar(stat = 'identity') +
@@ -42,8 +45,8 @@ biomarkers %>%
 # plot the percentage of genes in the biomarkers that are also in the DE results
 
 # benchmark 1: biomarkers
-results <- list.files(path='./flop_results/funcomics/fullmerged/', pattern='__fullmerge.tsv', full.names=TRUE) %>%
-    lapply(., read_tsv) %>% bind_rows()
+results <- list.files(path='./flop_results_benchmark/funcomics/fullmerged/', pattern='__fullmerge.tsv', full.names=TRUE) %>%
+    lapply(., read_tsv) %>% bind_rows() %>% filter(main_dataset != 'Atlascyt')
 pk_cell_links <- read_delim(file='pk_data_celltypelinks.csv', delim = ';') %>% select(PK, Data)
 
 biomarkers <- results %>%
@@ -65,8 +68,6 @@ selected_celltypes <- c('CM', 'Fib', 'Endo', 'Lymphoid', 'Myeloid', 'vSMCs', 'PC
 
 non_selected_celltypes <- celltypes %>% setdiff(selected_celltypes)
 
-full_auc_tibble <- tibble()
-full_auprc_tibble <- tibble()
 
 # Just one iteration, only using the celltypes of the dataset and separating per dataset
 biomarkers_data_subset <- biomarkers_data %>%
@@ -196,18 +197,49 @@ auprc_tibble <- biomarkers_data_subset %>%
 
 biomarkers_results <- left_join(auc_tibble, auprc_tibble, by = c('main_dataset', 'pipeline'))
 
-# scatter plot of AUC and AUPRC
 biomarkers_results %>%
-    ggplot(aes(x = auc, y = auprc, color = pipeline, label = pipeline)) +
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auprc)) %>%
+    print(n=12)
+
+biomarkers_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auprc)) %>%
+    mutate(edger_deseq2 = case_when(str_detect(pipeline, 'edger') | str_detect(pipeline, 'deseq2') ~ TRUE, TRUE ~ FALSE)) %>%
+    group_by(edger_deseq2) %>%
+    summarise(mean_auprc = mean(auprc), mean_auc = mean(auc), n = n(), sd_auprc = sd(auprc), sd_auc = sd(auc))
+
+# scatter plot of AUC and AUPRC
+scatter_plot_b1 <- biomarkers_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    ggplot(aes(x = auc, y = auprc, label = pipeline)) +
     geom_point() +
-    geom_text_repel(size = 5, family = 'Calibri') +
+    ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines')) +
     theme_cowplot() +
-    labs(x = 'AUC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+    labs(x = 'AUROC', y = 'AUPRC') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
+    #add labels to the points
+
+baseline_scatter_plot_b1 <- biomarkers_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    ggplot(aes(x = auc, y = auprc)) +
+    geom_point() +
+    # ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines')) +
+    geom_hline(yintercept = baseline_auprc_biomarkers, linetype = 'dashed') +
+    geom_vline(xintercept = 0.5, linetype = 'dashed') +
+    xlim(NA, 1) +
+    ylim(NA, 1) +
+    theme_cowplot() +
+    labs(x = 'AUROC', y = 'AUPRC') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
     #add labels to the points
 
 # boxplots of AUC and AUPRC
-biomarkers_results %>%
+boxplot1_auroc_b1 <- biomarkers_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auc, fill = pipeline)) +
     geom_boxplot() +
@@ -215,35 +247,65 @@ biomarkers_results %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     geom_hline(yintercept = 0.5, linetype = 'dashed') +
     ylim(0.5, 1) +
-    labs(x = 'Pipeline', y = 'AUC', title = 'AUROC per dataset and pipeline') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+    labs(y = 'AUROC') +
+    theme(plot.title = element_blank(), 
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    text = element_text(family='Calibri'), legend.position = 'none')
 
-biomarkers_results %>%
+boxplot_auprc_b1 <- biomarkers_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auprc, fill = pipeline)) +
     geom_boxplot() +
     theme_cowplot() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     geom_hline(yintercept = baseline_auprc_biomarkers, linetype = 'dashed') +
-    labs(x = 'Pipeline', y = 'AUPRC', title = 'AUPRC per dataset and pipeline') +
-    theme(plot.title = element_text(hjust = 0.5), 
+    labs(y = 'AUPRC') +
+    theme(plot.title = element_blank(), 
         text = element_text(family='Calibri'), 
+        axis.title.x = element_blank(),
         legend.position = 'none') +
     scale_y_continuous(breaks=seq(0, 1, 0.2), limits=c(0,1))
     # add ticks from 0 to 1 every 0.2 points
 
 
+boxplots_b1 <- ggarrange(boxplot1_auroc_b1, boxplot_auprc_b1, ncol = 1, nrow = 2) %>% ggpubr::as_ggplot()
+b1 <- ggarrange(scatter_plot_b1, boxplots_b1, ncol = 2, nrow = 1, widths = c(6, 4), padding = unit(1, 'cm')) %>% ggpubr::as_ggplot()
+
+ggsave('plots/benchmark1.png', plot = b1, device = 'png', width = 18, height = 12, units = 'cm', dpi = 200)
+
+ggsave('plots/benchmark1.svg', plot = b1, device = 'svg', width = 16, height = 10, units = 'cm', dpi = 200)
+
+ggsave('plots/benchmark1_baseline.svg', plot = baseline_scatter_plot_b1, device = 'svg', width = 8, height = 8, units = 'cm', dpi = 200)
+
+
 # BENCHMARK 2: tfs to cell type
 library(stringr)
+
+results_collectri <- results %>% filter(resource == 'collectri')
+tfs_collectri <- results_collectri %>% pull(items) %>% unique()
 
 atac_tf_activity <- read_csv('atac_tf_activity.csv') %>% 
     dplyr::rename('TF' = '...1') %>%
         separate(TF, into = c("part1", "part2", "TF"), sep = "\\.") %>%
         select(-part1, -part2)
+# filter the TF activity only for TFs in collectri
+atac_tf_activity_filtered <- atac_tf_activity %>% filter(TF %in% tfs_collectri)
 
-results_collectri <- results %>% filter(resource == 'collectri')
-tfs_collectri <- results_collectri %>% pull(items) %>% unique()
-
+tfs_groundtruth <- atac_tf_activity_filtered %>% pivot_longer(-TF, names_to='cell_type', values_to='act_atac') %>%
+    group_by(cell_type) %>%
+    # for tfs that are mapped to more that one cell line, keep the one with the highest activity
+    filter(TF %in% tfs_collectri) %>%
+    group_by(TF) %>%
+    arrange(desc(act_atac), .by_group = TRUE) %>%
+    slice(1) %>%
+    group_by(cell_type) %>%
+    arrange(desc(act_atac), .by_group = TRUE) %>%
+    slice(1:10) %>%
+    mutate(cell_type = case_when(
+        cell_type == 'Pericyte' ~ 'PC',
+        TRUE ~ cell_type
+    ))
 
 tfs_collectri_geneset <- read_tsv('./scripts/dc_resources/collectri__source.tsv') %>%
     left_join(tfs_groundtruth, by = c('source' = 'TF')) %>%
@@ -264,23 +326,6 @@ tfs_collectri_geneset %>%
     theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none') +
     facet_wrap(~cell_type)
 
-# filter the TF activity only for TFs in collectri
-atac_tf_activity_filtered <- atac_tf_activity %>% filter(TF %in% tfs_collectri)
-
-tfs_groundtruth <- atac_tf_activity_filtered %>% pivot_longer(-TF, names_to='cell_type', values_to='act_atac') %>%
-    group_by(cell_type) %>%
-    # for tfs that are mapped to more that one cell line, keep the one with the highest activity
-    filter(TF %in% tfs_collectri) %>%
-    group_by(TF) %>%
-    arrange(desc(act_atac), .by_group = TRUE) %>%
-    slice(1) %>%
-    group_by(cell_type) %>%
-    arrange(desc(act_atac), .by_group = TRUE) %>%
-    slice(1:10) %>%
-    mutate(cell_type = case_when(
-        cell_type == 'Pericyte' ~ 'PC',
-        TRUE ~ cell_type
-    ))
 
 # count how many cell types per TF
 tfs_groundtruth %>% group_by(cell_type) %>% count() %>% arrange(desc(n)) %>% print(n=50)
@@ -396,29 +441,60 @@ tfs_groundtruth_results_auprc <- tfs_data_subset %>%
 
 tfs_results <- left_join(tfs_groundtruth_results_auc, tfs_groundtruth_results_auprc, by = c('main_dataset', 'pipeline'))   
 
+tfs_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auc)) %>%
+    print(n=12)
+
+tfs_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auprc)) %>%
+    mutate(edger_deseq2 = case_when(str_detect(pipeline, 'edger') | str_detect(pipeline, 'deseq2') ~ TRUE, TRUE ~ FALSE)) %>%
+    group_by(edger_deseq2) %>%
+    summarise(mean_auprc = mean(auprc), mean_auc = mean(auc), n = n(), sd_auprc = sd(auprc), sd_auc = sd(auc))
+
+
 #scatter
-tfs_results %>%
+scatter_plot_b2 <- tfs_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
-    ggplot(aes(x = auc, y = auprc, color = pipeline, label = pipeline)) +
+    ggplot(aes(x = auc, y = auprc, label = pipeline)) +
     geom_point() +
-    geom_text_repel(size = 5, family = 'Calibri') +
+    ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines'), max.overlaps = 100) +
     theme_cowplot() +
-    labs(x = 'AUC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
-    
+    labs(x = 'AUROC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
+
+baseline_scatter_plot_b2 <- tfs_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    ggplot(aes(x = auc, y = auprc)) +
+    geom_point() +
+    # ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines')) +
+    geom_hline(yintercept = baseline_auprc_tfs, linetype = 'dashed') +
+    geom_vline(xintercept = 0.5, linetype = 'dashed') +
+    xlim(NA, 1) +
+    ylim(NA, 1) +
+    theme_cowplot() +
+    labs(x = 'AUROC', y = 'AUPRC') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
+    #add labels to the points
+
 #boxplots
-tfs_results %>%
+boxplot_auroc_b2<- tfs_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auc, fill = pipeline)) +
     geom_boxplot() +
     theme_cowplot() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     geom_hline(yintercept = 0.5, linetype = 'dashed') +
-    ylim(0.5, 1) +
     labs(x = 'Pipeline', y = 'AUC', title = 'AUROC per dataset and pipeline') +
     theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
 
-tfs_results %>%
+boxplot_auprc_b2 <- tfs_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auprc, fill = pipeline)) +
     geom_boxplot() +
@@ -431,17 +507,23 @@ tfs_results %>%
         legend.position = 'none') +
     scale_y_continuous(breaks=seq(0, 1, 0.2), limits=c(0,1))
 
+boxplots_b2 <- ggarrange(boxplot_auroc_b2, boxplot_auprc_b2, ncol = 1, nrow = 2) %>% ggpubr::as_ggplot()
+b2<- ggarrange(scatter_plot_b2, boxplots_b2, ncol = 2, nrow = 1, widths = c(6, 4), padding = unit(1, 'cm')) %>% ggpubr::as_ggplot()
 
+ggsave('plots/benchmark2.svg', plot = b2, device = 'svg', width = 16, height = 10, units = 'cm', dpi = 200)
 
+ggsave('plots/benchmark2_baseline.svg', plot = baseline_scatter_plot_b2, device = 'svg', width = 8, height = 8, units = 'cm', dpi = 200)
 
 
 # BENCHMARK 3: cytokines associated to hallmarks
 # read in the cytokine activity data
-cytokine_results <- read_tsv('./flop_results/funcomics/fullmerged/Atlascyt__fullmerge.tsv') %>%
+cytokine_results <- read_tsv('./flop_results_benchmark/funcomics/fullmerged/Atlascyt__fullmerge.tsv') %>%
     filter(resource == 'hallmarks_mouse', statparam == 'stat') %>%
     separate(bio_context, into = c('cell_type', 'rm'), sep = '_v_', remove=FALSE) %>%
     separate(cell_type, into = c('cell_type', 'true_cytokine'), sep = '_') %>%
     select(-rm)
+
+prior_biocontexts <- read_tsv('hallmarks_benchmark/Atlascyt/Atlascyt__metadata.tsv')
 
 
 celltypes_cytokines <- cytokine_results %>% pull(bio_context) %>% unique() %>% strsplit(., split = '_v_') %>% unlist() %>% tibble('bio_context'=.) %>% separate(bio_context, into=c('cell_type', 'pred_cytokine'), remove=TRUE) %>% distinct()
@@ -489,8 +571,8 @@ mean_labels <- means %>%
     mutate(label = paste("Mean =", round(mean_act, 2)),
             y_pos = 0.45) 
          
-p + geom_text(data = mean_labels, aes(x = mean_act, y = y_pos, label = label), 
-              size = 3, vjust = "top", color = "black")
+# p + geom_text(data = mean_labels, aes(x = mean_act, y = y_pos, label = label), 
+            #   size = 3, vjust = "top", color = "black")
 
 
 roc_tibble <- cytokines_data_subset %>%
@@ -547,46 +629,6 @@ prc_tibble %>%
     labs(x = 'Recall', y = 'Precision', title = 'Precision-recall curves') +
     theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri')) 
 
-hallmarks_groundtruth_results_auc <- cytokines_data_subset %>%
-    group_by(pipeline) %>%
-    arrange(desc(act), .by_group = TRUE) %>%
-    group_split() %>%
-    purrr::map(., function(x){
-        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
-        auc_obj <- ROCR::performance(PR_object, measure = "auc")
-        pipeline <- x$pipeline %>% unique()
-        # add row to auc_tibble
-        auc_tibble <- tibble(pipeline = pipeline, auc = auc_obj@y.values[[1]])
-        return(auc_tibble)
-    }) %>% bind_rows() 
-
-hallmarks_groundtruth_results_auprc <- cytokines_data_subset %>%
-    group_by(pipeline) %>%
-    arrange(desc(act), .by_group = TRUE) %>%
-    group_split() %>%
-    purrr::map(., function(x){
-        PR_object <- prediction(x$act, x$is_tp) #Evaluate classification
-        auprc_obj <- ROCR::performance(PR_object, measure = "aucpr")
-        pipeline <- x$pipeline %>% unique()
-        # add row to auc_tibble
-        auc_tibble <- tibble(pipeline = pipeline, auprc = auprc_obj@y.values[[1]])
-        return(auc_tibble)
-    }) %>% bind_rows() 
-
-hallmarks_results <- left_join(hallmarks_groundtruth_results_auc, hallmarks_groundtruth_results_auprc, by = c('pipeline'))   
-
-order_pipelines_auc <- hallmarks_results %>% arrange(desc(auc)) %>% pull(pipeline)
-
-#scatter
-hallmarks_results %>%
-    mutate(pipeline = factor(pipeline, levels = order_pipelines_auc)) %>%
-    ggplot(aes(x = auc, y = auprc, color = pipeline, label = pipeline)) +
-    geom_point() +
-    ggrepel::geom_text_repel(size = 5, family = 'Calibri') +
-    theme_cowplot() +
-    labs(x = 'AUC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
-
 
 hallmarks_groundtruth_results_auc <- cytokines_data_subset %>%
     group_by(cell_type, pipeline) %>%
@@ -615,19 +657,65 @@ hallmarks_groundtruth_results_auprc <- cytokines_data_subset %>%
     }) %>% bind_rows() 
 
 hallmarks_results <- left_join(hallmarks_groundtruth_results_auc, hallmarks_groundtruth_results_auprc, by = c('cell_type', 'pipeline'))   
-#boxplots
+
 hallmarks_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auc)) %>%
+    print(n=12)
+
+hallmarks_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    arrange(desc(auprc)) %>%
+    mutate(filtered = case_when(str_detect(pipeline, 'unfiltered') ~ FALSE, TRUE ~ TRUE)) %>%
+    group_by(filtered) %>%
+    summarise(mean_auprc = mean(auprc), mean_auc = mean(auc), n = n(), sd_auprc = sd(auprc), sd_auc = sd(auc))
+
+#scatter
+scatter_plot_b3 <- hallmarks_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    mutate(pipeline = fct_reorder(pipeline, auc)) %>%
+    ggplot(aes(x = auc, y = auprc, label = pipeline)) +
+    geom_point() +
+    ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines'), max.overlaps = 100) +
+    geom_hline(yintercept = baseline_auprc_hallmarks, linetype = 'dashed') +
+    geom_vline(xintercept = 0.5, linetype = 'dashed') +
+    theme_cowplot() +
+    xlim(0.45, 1) +
+    ylim(0.15, 0.6)+
+    labs(x = 'AUROC', y = 'AUPRC', title = 'AUC vs AUPRC for the different pipelines') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
+
+baseline_scatter_plot_b3 <- hallmarks_results %>%
+    group_by(pipeline) %>%
+    summarise(auc = mean(auc), auprc = mean(auprc)) %>%
+    ggplot(aes(x = auc, y = auprc)) +
+    geom_point() +
+    # ggrepel::geom_text_repel(family = 'Calibri', min.segment.length = unit(0, 'lines')) +
+    geom_hline(yintercept = baseline_auprc_hallmarks, linetype = 'dashed') +
+    geom_vline(xintercept = 0.5, linetype = 'dashed') +
+    xlim(NA, 1) +
+    ylim(NA, 1) +
+    theme_cowplot() +
+    labs(x = 'AUROC', y = 'AUPRC') +
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
+    #add labels to the points
+
+
+#boxplots
+boxplot_auroc_b3 <- hallmarks_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auc, fill = pipeline)) +
     geom_boxplot() +
     theme_cowplot() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     geom_hline(yintercept = 0.5, linetype = 'dashed') +
-    ylim(0.5, 1) +
     labs(x = 'Pipeline', y = 'AUC', title = 'AUROC per dataset and pipeline') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'), legend.position = 'none')
+    theme(plot.title = element_blank(), text = element_text(family='Calibri'), legend.position = 'none')
 
-hallmarks_results %>%
+boxplot_auprc_b3 <- hallmarks_results %>%
     mutate(pipeline = fct_reorder(pipeline, auc)) %>%
     ggplot(aes(x = pipeline, y = auprc, fill = pipeline)) +
     geom_boxplot() +
@@ -635,9 +723,104 @@ hallmarks_results %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     geom_hline(yintercept = baseline_auprc_hallmarks, linetype = 'dashed') +
     labs(x = 'Pipeline', y = 'AUPRC', title = 'AUPRC per dataset and pipeline') +
-    theme(plot.title = element_text(hjust = 0.5), 
+    theme(plot.title = element_blank(), 
         text = element_text(family='Calibri'), 
         legend.position = 'none') +
     scale_y_continuous(breaks=seq(0, 1, 0.2), limits=c(0,1))
 
+
+boxplots_b3 <- ggarrange(boxplot_auroc_b3, boxplot_auprc_b3, ncol = 1, nrow = 2) %>% ggpubr::as_ggplot()
+b3 <- ggarrange(scatter_plot_b3, boxplots_b3, ncol = 2, nrow = 1, widths = c(6, 4), padding = unit(1, 'cm')) %>% ggpubr::as_ggplot()
+
+ggsave('plots/benchmark3.svg', plot = b3, device = 'svg', width = 16, height = 10, units = 'cm', dpi = 200)
+
+ggsave('plots/benchmark3_baseline.svg', plot = baseline_scatter_plot_b3, device = 'svg', width = 8, height = 8, units = 'cm', dpi = 200)
+
+
+# SIZE-DE CORR PLOT
+
+deresults_files <- list.files(path = 'flop_results/diffexp', pattern = 'deresults.tsv', full.names = TRUE) %>%
+    .[!grepl('Atlascyt', .)] %>%
+    purrr::map(., function(x){
+        data <- read_tsv(x)
+        filtered_data <- data %>%
+            select(ID, contains('__filtered__NA+deseq2')) %>%
+            pivot_longer(-ID, names_to = 'runid', values_to = 'value') %>%
+            separate(runid, into = c('param', 'filtering', 'pipeline', 'biocontext', 'dataset', 'subset'), sep = '__') %>%
+            pivot_wider(names_from = 'param', values_from = 'value')
+        return(filtered_data)
+    }) %>% bind_rows()
+
+
+de_results_summary <- deresults_files %>%
+    group_by(biocontext, dataset, subset) %>%
+    filter(padj < 0.05, logFC>1.5) %>%
+    summarise(n = n())
+
+size_datasets <- list.dirs("benchmark_data", full.names=TRUE) %>%
+    purrr::map(., function(x){
+        data <- read_tsv(list.files(x, pattern = 'metadata.tsv', full.names = TRUE))
+        dataset_id <- x %>% strsplit(., '/') %>% unlist() %>% .[2]
+        data <- data %>% mutate(dataset = dataset_id) %>% 
+        dplyr::filter(!stringr::str_detect(group, "No"))            
+        return(data)
+    }) %>% bind_rows() %>%
+    group_by(dataset, group) %>%
+    summarise(size = n()) %>%
+    separate(dataset, into = c('dataset', 'subset'), sep = '_')
+
+size_de_data <- right_join(de_results_summary, size_datasets, by = c('dataset' = 'dataset', 'subset' = 'subset')) %>%
+    summarise(size = sum(size), n=mean(n))
+
+ggplot(size_de_data, aes(x = size, y = n, colour = dataset)) +
+    geom_point() +
+    cowplot::theme_cowplot() +
+    labs(x = 'Size of dataset', y = 'Number of DE genes', title = 'Size of dataset vs number of DE genes') +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'))
+
+
+# Graphical abstract
+sample_pheatmap <- deresults_files %>%
+    filter(dataset == 'Chaffin2022') %>%
+    select(ID, subset, stat) %>%
+    filter(complete.cases(.)) %>%
+    arrange(desc(abs(stat))) %>%
+    pivot_wider(names_from = subset, values_from = stat) %>%
+    # remove nas in any row
+    column_to_rownames('ID') %>%
+    head(50) %>%
+    pheatmap(.,show_rownames = FALSE, 
+             show_colnames = FALSE, 
+             annotation_names_row = FALSE, 
+             annotation_names_col = FALSE, 
+             legend = FALSE,
+             color = viridis::viridis(n = 100, alpha = 1, 
+                                   begin = 0, end = 1, option = "viridis"))
+
+ggsave('plots/sample_pheatmap.svg', plot = sample_pheatmap, device = 'svg', width = 18, height = 12, units = 'cm', dpi = 200)
+
+
+
+biomarkers_data_subset %>% 
+    filter(main_dataset == 'Simonson2023', diffexp == 'deseq2', status == 'filtered', statparam=='stat') %>%
+    select(items, bio_context, act) %>%
+    pivot_wider(names_from = items, values_from = act, values_fn = mean) %>%
+    column_to_rownames('bio_context') %>%
+    pheatmap(.,
+    # show_rownames = FALSE, 
+            #  show_colnames = FALSE, 
+             annotation_names_row = FALSE, 
+             annotation_names_col = FALSE, 
+             cluster_rows = TRUE,
+             cluster_cols = TRUE,
+             legend = FALSE,
+             color = colorRampPalette(c("blue", "grey", "red"))(100))
+    
+    ggplot(aes(x = bio_context, y = items, fill = act)) +
+    geom_tile() + 
+    # color range
+    scale_fill_gradient2(low = "blue", mid = "grey", high = 'red') +
+    theme_minimal() +
+    theme(text = element_blank(),
+    legend.position= "none")
 

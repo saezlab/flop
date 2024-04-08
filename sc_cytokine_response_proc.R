@@ -1,7 +1,7 @@
 library(Seurat)
 library(tidyverse)
 
-files <- list.files('./benchmark_data/hallmarks', pattern = 'RDS$', full.names = TRUE)
+files <- list.files('./unproc_data/hallmarks', pattern = 'RDS$', full.names = TRUE)
 dir.create('./hallmarks_benchmark/')
 
 full_counts <- tibble(gene_symbol= character())
@@ -75,7 +75,6 @@ write_tsv(full_contrast, './hallmarks_benchmark/Atlascyt/Atlascyt__contrast.tsv'
 # we lost 4 celltypes due to pseudobulk filtering
 full_meta %>% separate(group, c('celltype', 'cyt'), sep = '_') %>% 
     distinct(celltype)
-
 
 metadata %>% 
   	ggplot(aes(color=sample, x=nCount_RNA, fill=sample)) + 
