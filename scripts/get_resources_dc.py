@@ -9,9 +9,6 @@ collectri = dc.get_collectri(organism='human', split_complexes=False)
 
 msigdb_hallmarks = msigdb.loc[msigdb['collection'] == 'hallmark'].rename(columns={'genesymbol':'target', 'geneset':'source'}).drop_duplicates()
 
-
-
-
 progeny.to_csv('progeny__source.tsv', sep='\t', index=False)
 # dorothea.to_csv('dorothea__source.tsv', sep='\t', index=False)
 collectri.to_csv('collectri__source.tsv', sep='\t', index=False)
