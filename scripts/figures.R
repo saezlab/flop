@@ -9,18 +9,12 @@ reheat_de <- read_tsv('./flop_results/diffexp/reheat__deresults.tsv') %>%
   pivot_longer(-ID) %>%
   separate(name, into = c('colid', 'filtering', 'de', 'contrast', 'dataset', 'study'), sep = '__') %>%
   pivot_wider(names_from = colid, values_from = value)
-full_df <- list.files('./flop_results/funcomics/fullmerged/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
-similarity_df <- list.files('flop_results/funcomics/overlap/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
-correlation_df <-  list.files('flop_results/funcomics/rank/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() %>%
-  dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
-
-# ccle and panacea
-panacea_spearman <- read_tsv('flop_results/funcomics/rank/GSE186341__total__rank.tsv')
-ccle_spearman <- read_tsv('flop_results/funcomics/rank/CCLE__total__rank.tsv')
-panacea_similarity <- read_tsv('flop_results/funcomics/overlap/GSE186341__overlap.tsv')
-ccle_similarity <- read_tsv('flop_results/funcomics/overlap/CCLE__overlap.tsv')
+full_df <- list.files('./flop_results/funcomics/fullmerged/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() #%>%
+  # dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
+similarity_df <- list.files('flop_results/funcomics/overlap/', full.names = TRUE) %>% lapply(read_tsv) %>% bind_rows() # %>%
+  # dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
+correlation_df <-  list.files('flop_results/funcomics/rank/', full.names = TRUE) %>% lapply( read_tsv) %>% bind_rows() # %>%
+  # dplyr::filter(subset %in% c("Liu15", "Pepin19", "Schiano17", "Spurell19", "Yang14") & main_dataset == 'reheat')
 
 
 p_cutoff <- 0.05
@@ -115,7 +109,6 @@ plot_reheat_detailed <- function(int_pipelines, int_dataset) {
 
   
   return(p)
-  
 }
 
 p <- plot_reheat_detailed( c('unfiltered+edger', 'filtered+deseq2'), 'Spurell19')
@@ -127,16 +120,18 @@ ggsave('flop_results/plots/supp3.png', supp2,  width = 15, height = 10, dpi = 30
 
 custom_sort <- function(x) {
   
-  # Split the vector based on "filtered" and "unfiltered"
+  # Split the vector based on "filtered" and "unfiltered". In case none match, get all
   filtered <- x[grep("^filtered", x)]
   unfiltered <- x[grep("unfiltered", x)]
+
+  ifelse(length(filtered) == 0, filtered <- x, filtered <- filtered)
   
   # Within the filtered group, sort strings containing "NA" first
-  filtered_nas <- sort(filtered[grep("-NA+", filtered)])
+  filtered_nas <- sort(filtered[grep("NA+", filtered)])
   filtered_non_nas <- sort(filtered[!filtered %in% filtered_nas])
   
   # Within the unfiltered group, sort strings containing "NA" first
-  unfiltered_nas <- sort(unfiltered[grep("-NA+", unfiltered)])
+  unfiltered_nas <- sort(unfiltered[grep("NA+", unfiltered)])
   unfiltered_non_nas <- sort(unfiltered[!unfiltered %in% unfiltered_nas])
 
 
@@ -152,7 +147,7 @@ correlation_toplot <- correlation_df %>%
   rowwise() %>%
   mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
   dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
-  group_by(id, resource) %>%
+  group_by(id, resource, main_dataset) %>%
   summarise(spearman_average = mean(value), spearman_sem =  sd(value)/sqrt(n())) %>%
   ungroup() %>%
   separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
@@ -161,6 +156,7 @@ correlation_toplot <- correlation_df %>%
          pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
 
 
+# dotplot
 p <- ggplot(correlation_toplot, aes(x = pipeline_a, y = pipeline_b, size = -spearman_sem, fill = spearman_average)) +
   geom_point(pch = 21) +
   scale_fill_viridis_c(option = "plasma", limits = c(0, 1)) +
@@ -171,12 +167,161 @@ p <- ggplot(correlation_toplot, aes(x = pipeline_a, y = pipeline_b, size = -spea
 
 ggsave('flop_results/plots/fig3.png', p, width = 12, height = 10, dpi = 300)
 
+
+
+# boxplot
+correlation_toplot_boxplot <- correlation_df %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
+  dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
+  separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
+  dplyr::filter(pipeline_a != pipeline_b) %>%
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b)))) %>%
+  select(-feature_1, -name)
+
+correlation_toplot_dupl <- correlation_toplot_boxplot %>%
+  rename(pipeline_a = pipeline_b, pipeline_b = pipeline_a) %>%
+  bind_rows(correlation_toplot_boxplot)
+
+dataset.labs <- c('CCLE', 'PANACEA', 'ReHeaT')
+names(dataset.labs) <- c('CCLE', 'GSE186341', 'reheat')
+
+resource_comparisons <- list( c('DE', 'dorothea'), c('DE', 'msigdb_hallmarks'), c('DE', 'progeny'))
+boxplot_fig2 <- correlation_toplot_dupl %>%
+  drop_na(value) %>%
+  ggplot(aes(y = pipeline_b, x = value, fill = resource)) +
+  geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
+  facet_wrap(~main_dataset, ncol=1, labeller = labeller(main_dataset = dataset.labs)) +
+  # stat_compare_means(aes(group = resource), method = 'wilcox.test', ref.group = 'DE', label = "p.signif", label.y = 0) +
+  ylab('Pipeline') + xlab('Spearman correlation') + 
+  theme_cowplot() +
+  theme(legend.position = 'bottom',
+        axis.text.x = element_text(size=10),
+        text = element_text(family='Calibri', size=10),
+        axis.text.y = element_text(size = 10))
+        
+ggsave('plots/fig2_new.png', boxplot_fig2, width = 17, height = 20, dpi = 300, units = 'cm')
+
+
+
+fig2_theme <- theme_cowplot() + theme(
+  axis.text.x = element_text(size=8, family='Arial'),
+  axis.text.y = element_text(size=8, family='Arial'),
+  axis.title = element_text(family='Arial', size=8),
+  legend.text = element_text(size=8, family='Arial'),
+  legend.title = element_text(size=8, family='Arial')
+)
+
+facet_b_fig2 <- correlation_toplot_dupl %>% 
+  filter(resource != 'DE') %>%
+  mutate(Filtered = ifelse(!grepl('unfiltered', pipeline_a), 'Yes', 'No')) %>%
+  ggplot(aes(y = spearman_average, x = main_dataset, fill = Filtered)) +
+  geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
+  stat_compare_means(aes(group = Filtered), method = 'wilcox.test', label = "p.signif", label.y=1.05, size=3) +
+  scale_fill_brewer(palette="Dark2") +
+  ylab('') + xlab('Dataset') +
+  scale_x_discrete(labels = c('CCLE', 'PANACEA', 'reheat')) +
+  ylim(0.5, 1.1) +
+  fig2_theme +
+  theme(axis.text.y = element_blank())
+
+facet_a_fig2 <- correlation_toplot_dupl %>% 
+  mutate(Space = ifelse(resource == 'DE', 'DGE sp.', 'Functional sp.')) %>%
+  ggplot(aes(y = spearman_average, x = main_dataset, fill = Space)) +
+  geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
+  stat_compare_means(aes(group = Space), method = 'wilcox.test', label = "p.signif", label.y = 1.05, size=3) +
+  ylab('Spearman correlation') + xlab('Dataset') +
+  scale_x_discrete(labels = c('CCLE', 'PANACEA', 'reheat')) +
+  ylim(0.5, 1.1) +
+  fig2_theme 
+
+
+facet_c_fig2_data <- correlation_df %>%
+# filter rows that have filtered in name
+  dplyr::filter(!grepl('unfiltered', feature_1) & !grepl('unfiltered', name)) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
+  dplyr::filter(type == 'correlation' & statparam == 'stat') %>%
+  group_by(id) %>%
+  summarise(spearman_average = mean(value), spearman_sd =  sd(value)) %>%
+  ungroup() %>%
+  separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
+  dplyr::filter(pipeline_a != pipeline_b) %>%
+  mutate(pipeline_a = str_replace(pipeline_a, '.*-', ''),
+         pipeline_b = str_replace(pipeline_b, '.*-', ''))  %>%
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
+
+
+facet_c_fig2 <- facet_c_fig2_data %>%
+  ggplot(aes(y = pipeline_b, x = pipeline_a, size = spearman_sd, fill = spearman_average)) +
+  geom_point(pch = 21) +
+  scale_fill_viridis_c(option = "plasma", limits = c(0.4, 1), name='Avg value') +
+  scale_size(trans = 'reverse', name='Sd', limits = c(0.2,0)) +
+  xlab('') + ylab('') +
+  guides(x = guide_axis(angle = 60)) +
+  fig2_theme
+
+facet_d_fig2_data <- similarity_df %>%
+# filter rows that have filtered in name
+  dplyr::filter(!grepl('unfiltered', feature_1) & !grepl('unfiltered', name)) %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
+  dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
+  group_by(id) %>%
+  summarise(similarity_average = mean(value), similarity_sd =  sd(value)) %>%
+  ungroup() %>%
+  separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
+  dplyr::filter(pipeline_a != pipeline_b) %>%
+  mutate(pipeline_a = str_replace(pipeline_a, '.*-', ''),
+         pipeline_b = str_replace(pipeline_b, '.*-', ''))  %>%
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
+
+
+facet_d_fig2 <- facet_d_fig2_data %>%
+  ggplot(aes(y = pipeline_b, x = pipeline_a, size = similarity_sd, fill = similarity_average)) +
+  geom_point(pch = 21) +
+  scale_fill_viridis_c(option = "plasma", limits = c(0.4, 1)) +
+  scale_size(trans = 'reverse', limits = c(0.2, 0)) +
+  xlab('') + ylab('') +
+  guides(x = guide_axis(angle = 60)) +
+  fig2_theme +
+  theme(axis.text.y = element_blank())
+
+panel_cd__fig2_legend <- cowplot::get_legend(facet_c_fig2) %>% ggpubr::as_ggplot()
+panel_a__fig2_legend <- cowplot::get_legend(facet_a_fig2) %>% ggpubr::as_ggplot()
+panel_b__fig2_legend <- cowplot::get_legend(facet_b_fig2) %>% ggpubr::as_ggplot()
+
+facet_a_fig2 <- facet_a_fig2 + theme(legend.position = 'none')
+facet_b_fig2 <- facet_b_fig2 + theme(legend.position = 'none')
+facet_c_fig2 <- facet_c_fig2 + theme(legend.position = 'none')
+facet_d_fig2 <- facet_d_fig2 + theme(legend.position = 'none')
+
+fig_2_new <- egg::ggarrange(facet_a_fig2, facet_b_fig2, facet_c_fig2, facet_d_fig2, ncol = 2, nrow = 2, padding = unit(4, "cm"), labels=c('A', 'B', 'C', 'D'))
+fig_2_legends <- egg::ggarrange(panel_a__fig2_legend, panel_b__fig2_legend, panel_cd__fig2_legend, ncol = 1, nrow = 3)
+ggsave('plots/supfig2_new_facets_filt.svg', fig_2_new, width = 16, height = 16, dpi = 300, units = 'cm')
+ggsave('plots/supfig2_new_facets_legend_filt.svg', fig_2_legends, height = 25, dpi = 300, units = 'cm')
+
+t_test_adj <- correlation_toplot_dupl %>%
+  drop_na(value) %>%
+  mutate(is_de = ifelse(resource == 'DE', 'Yes', 'No')) %>%
+  group_by(main_dataset, pipeline_a) %>%
+  group_split() %>%
+  purrr::map(., function(x){
+    padj_corr <- x %>% compare_means(value ~ is_de, p.adjust.method = "BH", method='wilcox.test', data = .,  alternative = 'greater') %>% mutate(main_dataset = unique(x$main_dataset), pipeline_a = unique(x$pipeline_a))
+    return(padj_corr)
+  }) %>% bind_rows() %>% select(main_dataset, pipeline_a, p.format) %>%
+  pivot_wider(names_from = main_dataset, values_from = p.format)
+
+
 # values for text
 correlation_toplot %>% 
   mutate(unfil_limma_a = ifelse(grepl('unfiltered', pipeline_a) & grepl('limma', pipeline_a), 'Yes', 'No')) %>%
   mutate(unfil_limma_b = ifelse(grepl('unfiltered', pipeline_b) & grepl('limma', pipeline_b), 'Yes', 'No')) %>%
   mutate(unfil_limma = ifelse(unfil_limma_a == 'Yes' | unfil_limma_b == 'Yes', 'Yes', 'No')) %>%
-  group_by(unfil_limma, resource) %>%
+  group_by(unfil_limma, resource, main_dataset) %>%
   summarise(mean(spearman_average))
 
 correlation_toplot %>% 
@@ -185,8 +330,34 @@ correlation_toplot %>%
   mutate(unfil_limma = ifelse(unfil_limma_a == 'Yes' | unfil_limma_b == 'Yes', 'Yes', 'No')) %>%
   filter(unfil_limma == 'Yes') %>%
   mutate(is_de = ifelse(resource == 'DE', 'Yes', 'No')) %>%
-wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.methods = "BH")
+  group_by(main_dataset) %>%
+  group_split() %>%
+  purrr::map(., function(x){
+    x %>% distinct(main_dataset) %>% pull(main_dataset) %>% print()
+    x %>% wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.methods = "BH")
+  })
 
+correlation_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='GSE186341') %>%
+  group_by(pipeline_a) %>%
+  mutate(filtered = ifelse(!grepl('unfiltered', pipeline_a), 'Yes', 'No')) %>%
+  group_by(filtered) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(sd)) %>% print(n=50)
+
+correlation_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='reheat') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(sd)) %>% print(n=50)
+
+correlation_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='CCLE') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(mean)) %>% print(n=50)
+
+correlation_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='GSE186341') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(mean)) %>% print(n=50)
 
 correlation_toplot %>% 
   mutate(filtered_a = ifelse(!grepl('unfiltered', pipeline_a), 'Yes', 'No')) %>%
@@ -201,7 +372,12 @@ correlation_toplot %>%
   mutate(filtered = ifelse(filtered_a == 'Yes' & filtered_b == 'Yes', 'Yes', 'No')) %>%
   filter(filtered == 'Yes') %>%
   mutate(is_de = ifelse(resource == 'DE', 'Yes', 'No')) %>%
-wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.methods = "BH")
+  group_by(main_dataset) %>%
+  group_split() %>%
+  purrr::map(., function(x){
+    x %>% distinct(main_dataset) %>% pull(main_dataset) %>% print()
+    x %>% wilcox.test(spearman_average ~ is_de, data = ., alternative = "less", p.adjust.methods = "BH")
+  })
 
 correlation_toplot %>% 
   mutate(unfil_deseq_edger_a = ifelse(grepl('unfiltered', pipeline_a) & (grepl('edger', pipeline_a) | grepl('deseq2', pipeline_a)), 'Yes', 'No')) %>%
@@ -242,6 +418,41 @@ p <- ggplot(similarity_toplot, aes(x = pipeline_a, y = pipeline_b, size = -simil
 
 ggsave('flop_results/plots/fig4.png', p, width = 12, height = 10, dpi = 300)
 
+
+similarity_toplot_boxplot <- similarity_df %>%
+  rowwise() %>%
+  mutate(id = paste0(custom_sort(c(feature_1, name))[1], ' - ', custom_sort(c(feature_1, name))[2])) %>%
+  dplyr::filter(type == 'agreement' & statparam == 'stat') %>%
+  separate(id, into = c('pipeline_a', 'pipeline_b'), sep = ' - ') %>%
+  dplyr::filter(pipeline_a != pipeline_b) %>%
+  mutate(pipeline_a = factor(pipeline_a, levels = custom_sort(unique(pipeline_a))),
+         pipeline_b = factor(pipeline_b, levels = custom_sort(unique(pipeline_b))))
+
+
+similarity_toplot_dupl <- similarity_toplot_boxplot %>%
+  rename(pipeline_a = pipeline_b, pipeline_b = pipeline_a) %>%
+  bind_rows(similarity_toplot_boxplot)
+
+
+boxplot_fig_similarity <- similarity_toplot_dupl %>%
+  drop_na(value) %>%
+  ggplot(aes(y = pipeline_b, x = value, fill = resource)) +
+  geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
+  facet_wrap(~main_dataset, ncol=1, labeller = labeller(main_dataset = dataset.labs)) +
+  # stat_compare_means(aes(group = resource), method = 'wilcox.test', ref.group = 'DE', label = "p.signif", label.y = 0) +
+  ylab('') + xlab('Similarity score') + 
+  theme_cowplot() +
+  theme(legend.position = 'none',
+        axis.text.x = element_text(size=10),
+        text = element_text(family='Calibri', size=10),
+        axis.text.y = element_blank())
+
+fig_2_new <- egg::ggarrange(boxplot_fig2, boxplot_fig_similarity, ncol = 2, nrow = 1)
+        
+ggsave('plots/fig2_new.png', fig_2_new, width = 17, height = 20, dpi = 300, units = 'cm')
+
+ggsave('plots/fig2_new_legend.svg', fig_2_new, width = 17, height = 20, dpi = 300, units = 'cm')
+
 # values for text
 similarity_toplot %>% 
   mutate(unfil_limma_a = ifelse(pipeline_a == 'unfiltered-vsn+limma', 'Yes', 'No')) %>%
@@ -271,6 +482,21 @@ similarity_toplot %>%
   mutate(unfil_deseq_edger = ifelse(unfil_deseq_edger_a == 'Yes' & unfil_deseq_edger_b == 'Yes', 'Yes', 'No')) %>%
   group_by(unfil_deseq_edger, resource) %>%
   summarise(mean(similarity_average))
+
+similarity_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='reheat') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(mean)) %>% print(n=50)
+
+similarity_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='CCLE') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(mean)) %>% print(n=50)
+
+similarity_toplot_dupl %>%
+  filter(resource != 'DE', main_dataset=='GSE186341') %>%
+  group_by(pipeline_a) %>%
+  summarise(mean = mean(value), sd = sd(value), max = max(value), min = min(value)) %>% arrange(desc(mean)) %>% print(n=50)
 
 # sup about variance
 sim_values <- similarity_df %>%
