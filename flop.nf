@@ -1,8 +1,25 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
 params.parent_folder = projectDir
-params.ngenes_threshold = 0
-params.pval_threshold = 1
+
+def asciiBanner = 
+"##########################################################################\n" +
+" Welcome to\n" +
+".------..------..------..------.\n" +
+"|F.--. ||L.--. ||O.--. ||P.--. |\n" +
+"| :(): || :/\\: || :/\\: || :/\\: |\n" +
+"| ()() || (__) || :\\/: || (__) |\n" +
+"|  -- F||  -- L||  -- O||  -- P|\n" +
+"'------''------''------''------'\n" +
+"\n" +
+" The FunctionaL Omics Preprocessing platform is\n" +
+" a workflow meant to evaluate the impact of different\n" +
+" normalization and differential expression tools on the\n" +
+" resulting functional space, in the context of bulk RNA-seq data.\n" +
+"\n" +
+" ##########################################################################\n"
+
+println asciiBanner
 
 //Downloads and stores prior knowledge sources
 process get_prsources{
@@ -41,7 +58,7 @@ process contrast_creator{
 }
 
 //Performs filtering, normalisation and differential expression analysis
-process diffexp_analysis{
+process diffexp_analysis {
 
     input:
     path scripts_dir
@@ -53,13 +70,58 @@ process diffexp_analysis{
     tuple val(subsetID), val(biocontext), val(status), path("*__de.qs")
 
     script:
-
     """
-    Rscript ${scripts_dir}/scripts/diffexp_analysis.R --dataset ${subsetID} --counts "${counts}" --meta "${meta}" --pipeline "${pipelines}" --status ${status} --bio ${biocontext}
+    Rscript ${scripts_dir}/scripts/diffexp_analysis.R \
+    --dataset ${subsetID} \
+    --counts "${counts}" \
+    --meta "${meta}" \
+    --pipeline "${pipelines}" \
+    --status ${status} \
+    --bio ${biocontext} \
+    --filterbyexpr-libsize ${params.filterbyexpr_libsize} \
+    --filterbyexpr-mincount ${params.filterbyexpr_mincount} \
+    --filterbyexpr-mintotalcount ${params.filterbyexpr_mintotalcount} \
+    --filterbyexpr-largen ${params.filterbyexpr_largen} \
+    --filterbyexpr-minprop ${params.filterbyexpr_minprop} \
+    --diffexp-limma-ndups ${params.diffexp_limma_ndups} \
+    --diffexp-limma-spacing ${params.diffexp_limma_spacing} \
+    --diffexp-limma-block "${params.diffexp_limma_block}" \
+    --diffexp-limma-weights ${params.diffexp_limma_weights} \
+    --diffexp-limma-method ${params.diffexp_limma_method} \
+    --diffexp-deseq2-test ${params.diffexp_deseq2_test} \
+    --diffexp-deseq2-fitType ${params.diffexp_deseq2_fitType} \
+    --diffexp-deseq2-quiet ${params.diffexp_deseq2_quiet} \
+    --diffexp-deseq2-minReplicatesForReplace ${params.diffexp_deseq2_minReplicatesForReplace} \
+    --diffexp-deseq2-parallel ${params.diffexp_deseq2_parallel} \
+    --diffexp-deseq2-betaprior ${params.diffexp_deseq2_betaprior} \
+    --diffexp-edger-calcnormfactors-method ${params.diffexp_edger_calcnormfactors_method} \
+    --diffexp-edger-calcnormfactors-refColumn ${params.diffexp_edger_calcnormfactors_refColumn} \
+    --diffexp-edger-calcnormfactors-logratiotrim ${params.diffexp_edger_calcnormfactors_logratiotrim} \
+    --diffexp-edger-calcnormfactors-sumtrim ${params.diffexp_edger_calcnormfactors_sumtrim} \
+    --diffexp-edger-calcnormfactors-doweighting ${params.diffexp_edger_calcnormfactors_doweighting} \
+    --diffexp-edger-calcnormfactors-acutoff ${params.diffexp_edger_calcnormfactors_acutoff} \
+    --diffexp-edger-calcnormfactors-p ${params.diffexp_edger_calcnormfactors_p} \
+    --diffexp-edger-estimatedisp-priordf ${params.diffexp_edger_estimatedisp_priordf} \
+    --diffexp-edger-estimatedisp-trendmethod ${params.diffexp_edger_estimatedisp_trendmethod} \
+    --diffexp-edger-estimatedisp-tagwise ${params.diffexp_edger_estimatedisp_tagwise} \
+    --diffexp-edger-estimatedisp-mixeddf ${params.diffexp_edger_estimatedisp_mixeddf} \
+    --diffexp-edger-estimatedisp-span ${params.diffexp_edger_estimatedisp_span} \
+    --diffexp-edger-estimatedisp-minrowsum ${params.diffexp_edger_estimatedisp_minrowsum} \
+    --diffexp-edger-estimatedisp-gridlength ${params.diffexp_edger_estimatedisp_gridlength} \
+    --diffexp-edger-estimatedisp-gridrange "${params.diffexp_edger_estimatedisp_gridrange}" \
+    --diffexp-edger-estimatedisp-robust ${params.diffexp_edger_estimatedisp_robust} \
+    --diffexp-edger-estimatedisp-winsortailp "${params.diffexp_edger_estimatedisp_winsortailp}" \
+    --diffexp-edger-estimatedisp-tol ${params.diffexp_edger_estimatedisp_tol} \
+    --diffexp-edger-glmqlfit-dispersion ${params.diffexp_edger_glmqlfit_dispersion} \
+    --diffexp-edger-glmqlfit-libsize ${params.diffexp_edger_glmqlfit_libsize} \
+    --diffexp-edger-glmqlfit-offset ${params.diffexp_edger_glmqlfit_offset} \
+    --diffexp-edger-glmqlfit-weights ${params.diffexp_edger_glmqlfit_weights} \
+    --diffexp-edger-glmqlfit-abundancetrend ${params.diffexp_edger_glmqlfit_abundancetrend} \
+    --diffexp-edger-glmqlfit-avelogcpm ${params.diffexp_edger_glmqlfit_avelogcpm} \
+    --diffexp-edger-glmqlfit-robust ${params.diffexp_edger_glmqlfit_robust}
     """
-
-
 }
+
 
 //Merges the output of differential expression analysis files
 process output_merge_de{
@@ -91,7 +153,7 @@ process downstream_merge_de{
     path scripts_dir
     tuple val(subsetID), val(biocontext), val(status), path(diffexpr_files)
     each method
-    val(ngenes_threshold)
+    val(flop_ngenes_threshold)
  
     output:
     tuple val(subsetID), val(biocontext), val(status), path ('*__decouplerinput.tsv'), optional: true
@@ -101,7 +163,7 @@ process downstream_merge_de{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}" --threshold ${ngenes_threshold}
+    Rscript ${scripts_dir}/scripts/merge_de.R --dataset ${subsetID} --bio ${biocontext} --param ${method} --files "${diffexpr_files}" --threshold ${flop_ngenes_threshold}
     """
 
 }
@@ -120,9 +182,14 @@ process func_decoupler{
     //afterScript "rm -f ${decoupler_files}"
     
     script:
-
     """
-    python3 ${scripts_dir}/scripts/decoupler_proc.py ${decoupler_files} ${resources}
+    python3 ${scripts_dir}/scripts/decoupler_proc.py \
+        ${decoupler_files} \
+        ${resources} \
+        ${params.decoupler_runulm_batch_size} \
+        ${params.decoupler_runulm_minn} \
+        ${params.decoupler_runulm_verbose} \
+        ${params.decoupler_runulm_useraw}
     """
     
 }
@@ -194,7 +261,7 @@ process top_bottom_overlap_analysis{
     input:
     path scripts_dir
     tuple val(datasetID), path (func_results), path (de_results)
-    val(pval_thresh)
+    val(flop_pval_threshold)
 
     output:
     tuple val(datasetID), path ("*__overlap.tsv")
@@ -202,7 +269,7 @@ process top_bottom_overlap_analysis{
     script:
 
     """
-    Rscript ${scripts_dir}/scripts/top_bottom_overlap_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results} --pval_thresh ${pval_thresh}
+    Rscript ${scripts_dir}/scripts/top_bottom_overlap_analysis.R --dataset ${datasetID} --func_file ${func_results} --de_file ${de_results} --pval_thresh ${flop_pval_threshold}
     """
 
 }
@@ -212,7 +279,6 @@ workflow {
     Channel
         .fromPath("$params.data_folder/*", type: 'dir')
         .map{it -> tuple it[-1], it}
-        // .view()
         .set {datasets}
     
     Channel
@@ -225,7 +291,6 @@ workflow {
   
     Channel
         .of('logFC', 'stat')
-        // .view()
         .set {diffexpr_metrics}
     
     get_prsources(params.scripts_dir)
@@ -240,7 +305,6 @@ workflow {
             it.name.toString().split("__")[1],
             it)}
         .groupTuple(by:[0,1], size: 2)
-        // .view()
         .map{it -> tuple it[0], it[1], it[2][0], it[2][1]}
         .set {contrasts}
 
@@ -250,7 +314,6 @@ workflow {
     
     diffexpr.downstream
         .groupTuple(by:[0,1,2], size: 6)
-        // .view{"Differential analysis: $it \n"}
         .set {diffexpr_files}
     
     diffexpr.output
@@ -259,14 +322,12 @@ workflow {
         }
         .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0].split("_")[0], it}
         .groupTuple(by:0)
-        // .view()
         .set {diffexpr_out}
     
     output_merge_de(params.scripts_dir,diffexpr_out)
         .set {diffexpr_merged}
 
-    downstream_merge_de(params.scripts_dir, diffexpr_files, diffexpr_metrics, params.ngenes_threshold)
-        // .view{"Decoupler input: $it \n"}
+    downstream_merge_de(params.scripts_dir, diffexpr_files, diffexpr_metrics, params.flop_ngenes_threshold)
         .set {mergede}
     
     func_decoupler(params.scripts_dir, mergede, resources)
@@ -274,7 +335,6 @@ workflow {
         [ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
         }
         .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
-        // .view()
         .set {decoupler}
 
     decoupler_merger(params.scripts_dir, decoupler)
@@ -284,7 +344,6 @@ workflow {
         .set {subset_results}
 
     subset_merger(params.scripts_dir, subset_results)
-        // .view{"subset: $it"}
         .concat(diffexpr_merged)
         .groupTuple(by:0, size:2)
         .map{it -> tuple it[0], it[1][0], it[1][1]}
@@ -293,7 +352,7 @@ workflow {
     rank_analysis(params.scripts_dir, full_results)
         .set {rank}
 
-    top_bottom_overlap_analysis(params.scripts_dir, full_results, params.pval_threshold)
+    top_bottom_overlap_analysis(params.scripts_dir, full_results, params.flop_pval_threshold)
         .set {jaccard}
 
 }
