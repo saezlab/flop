@@ -23,7 +23,12 @@ mat = input_data.astype(float)
 # Decoupler analysis
 network = pd.read_csv(resource_file, sep='\t')
 if 'weight' in network.columns:
-    dc_result = dc.run_ulm(mat, network)
+    dc_result = dc.run_ulm(mat, 
+                           network,
+                           batch_size=batch_size,
+                           min_n=min_n,
+                           verbose=verbose,
+                           use_raw=useraw)
 else:
     dc_result = dc.run_ulm(mat, network, weight=None)
 
