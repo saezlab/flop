@@ -24,37 +24,28 @@ conda activate flop
 
 Once installed, you are ready to run FLOP!
 
-## Quick Start
+## Run
 
-It is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA study via:
+Mode of usage:
+
+```groovy
+nextflow -C flop.config run flop.nf -params-file params_flop.json --data_folder [data folder] -profile [desktop or cluster]
+```
+
+FLOP has several ways of personalization. These are all possible input parameters:
+
+- --data-folder (required): data folder, containing the subfolders with the datasets to be analyzed
+- -profile (default: desktop): config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
+- -params-file (required): JSON parameter configuration file for the different steps included in FLOP. Please check the relevant documentation for the specific functions. About FLOP-specific parameters:
+	- flop_pval_threshold: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Top-bottom overlap module. Default is 1 (no filtering).
+	- flop_ngenes_threshold: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis. Default is 0 (no filtering).
+
+In addition, we provide a bash wrapper around FLOP to run specific settings. For example, it is possible to run an example version of FLOP with a test dataset containing three contrasts from the PANACEA study via:
 
 ```bash
 bash flop_launcher.sh -t
 ```
 
-## Run
-
-Mode of usage:
-
-```bash
-bash flop_launcher.sh [-d data folder] [-e config set][-p pvalue threshold] [-f n DE genes threshold] [-t] [-s] [-h]
-```
-
-FLOP has several ways of personalization. These are all possible input parameters:
-
-- -d: data folder, containing the subfolders with the datasets to be analyzed
-- -e: config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
-- -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
-- -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
-- -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis. Default is 0 (no filtering).
-- -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets, and then outputs the figures also shown in the study. It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. It is strongly advised to run this setup within a HPC environment (config set = cluster).
-- -h: shows this help message
-
-You can run FLOP with the minimal settings by using this command:
-
-```bash
-bash flop_launcher.sh [-d data_folder]
-```
 
 To run the analysis showed in the study using PANACEA, CCLE and ReHeat (it is recommended to run it in a HPC environment):
 
