@@ -17,6 +17,7 @@ dependencies:
   - r-ggdendro=0.1.23
   - r-ggdist=3.2.1
   - r-ggpp=0.5.2
+  - r-ggrepel=0.9.5
   - r-qs=0.25.5
   - bioconductor-edger=3.40.0
   - bioconductor-deseq2=1.38.0
