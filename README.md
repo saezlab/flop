@@ -53,6 +53,14 @@ To run the analysis showed in the study using PANACEA, CCLE and ReHeat (it is re
 bash flop_launcher.sh -s -e cluster
 ```
 
+In addition, users can get multidimensional scaling plots for specific comparisons via the -m option. 
+The configuration string must be inputed as follows (order is important!):
+
+```bash
+bash flop_launcher.sh -m '[file path for FLOP result (fullmerged)] [biological context] [resource] [DE metric (logFC or stat (t-value))] [subset (optional)]'
+```
+The plot will be saved in the current directory.
+
 # Input
 
 FLOP works with two or three different files. Each different dataset folder should contain at least two of the three files specified below. FLOP support subseting of large datasets (in this case, the results are averaged for the evaluation modules), you can specify a subset using this naming format: {Dataset ID}_{Subset identifier} in the folder name and in the files names. One example data directory could be:
