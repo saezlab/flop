@@ -24,11 +24,9 @@ help_txt="
 Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-t] [-h]
 
 Argument list:
-        -d: data folder, containing the subfolders with the datasets to be analyzed
-        -e: config set, either 'desktop' or 'cluster'
+        -e: config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
         -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
-        -p: pvalue threshold that the genes or functional terms need to pass in order to be considered significant for the Jaccard Index module. Default is 1 (no filtering).
-        -f: Minimum number of significant genes per contrast. Only contrasts that have a minimum of n genes with a pvalue below 0.05 will be considered for enrichment analysis.
+        -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets, and then outputs the figures also shown in the study. It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. It is strongly advised to run this setup within a HPC environment (config set = cluster).
         -h: shows this help message
 
 For more information, please refer to the README file.
@@ -57,11 +55,8 @@ pksource_downloader () {
   unzip -o flop_pkresources_31082023.zip -d ./scripts
 }
 
-while getopts 'd:e:f:p:hst' OPTION; do
+while getopts 'e:hst' OPTION; do
   case "$OPTION" in
-    d)
-      data_folder="$OPTARG"
-      ;;
     e)
       config_set="$OPTARG"
       ;;
@@ -88,74 +83,28 @@ while getopts 'd:e:f:p:hst' OPTION; do
       # Rscript ./scripts/panacea_proc.R
       # Rscript ./scripts/ccle_proc.R
       ;;
-    f)
-      n_thresh="$OPTARG"
-      ;;
-    p)
-      p_thresh="$OPTARG"
-      ;;
     ?)
       error_func
       ;;
   esac 
 done
 if [ $OPTIND -eq 1 ]; then error_func; fi
-if [ -z $data_folder ]; then error_func; fi
 if [ -z $paper_mode ]; then paper_mode=false; fi
-if [ -z $n_thresh ]; then n_thresh=0; fi
 if [ -z $config_set ]; then config_set='desktop'; fi
-if [ -z $p_thresh ]; then p_thresh=1; fi
 shift "$(($OPTIND -1))"
-
-suffix="/" # add a slash to the end of the data folder if it is not already there
-if [[ $data_folder == *$suffix ]]; then
-  data_folder+=""
-else
-  data_folder+="/"
-fi
-
-parent_folder=$(dirname $data_folder)
-name_datasets=$(ls -ld "$data_folder"* | awk '{print $NF}' | rev | cut -d "/" -f1 | rev | sort | uniq | tr '\n' ' ')
-
-# Ask if config is correct, if not, exit
-
-
-echo "${banner}"
-echo "
-##SETTINGS##
-Running option: $config_set
-Data folder: $data_folder
-Datasets found: $name_datasets
-Minimum number of significant genes per contrast: $n_thresh
-Pvalue cutoff for the top-bottom overlapping module: $p_thresh"
 
 # Run flop_benchmark
 
-
 if [ $config_set == "desktop" ] || [ $config_set == "cluster" ]; then
-        echo "Running FLOP on a $config_set..."
-        nextflow -C flop.config run flop.nf -profile $config_set --data_folder "$data_folder" --parent_folder "$parent_folder" --ngenes_threshold "$n_thresh" --pval_threshold "$p_thresh"
+        nextflow -C flop.config run flop.nf -resume -profile $config_set --data_folder "$data_folder" -params-file ./params_flop.json
 else
         echo "Valid options: desktop, cluster"
         error_func
 fi
 
-
-
-if [ $paper_mode ]; then
+if [ $paper_mode == true ]; then
   Rscript ./scripts/figures.R
   rm -r flop_pkresources_31082023.zip
   rm -r ./scripts/dc_resources
 fi
-
-if [ $? -eq 0 ] 
-then 
-  echo "Analysis completed successfully! Your results are in $parent_folder/flop_results"
-  exit 0
-else 
-  echo "The execution finished unsuccessfully. Please check the log file for more information." >&2 
-  exit 1
-fi
-
-
 

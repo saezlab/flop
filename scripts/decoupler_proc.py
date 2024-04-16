@@ -8,6 +8,10 @@ import sys
 # Input management
 input_file = sys.argv[1]
 resource = sys.argv[2]
+batch_size = int(sys.argv[3])
+min_n = int(sys.argv[4])
+verbose = bool(sys.argv[5])
+useraw = bool(sys.argv[6])
 scriptdir = sys.argv[0].replace('decoupler_proc.py', '')
 resource_file = '{}dc_resources/{}__source.tsv'.format(scriptdir, resource)
 input_data = pd.read_csv(input_file, sep='\t').transpose()
@@ -19,7 +23,12 @@ mat = input_data.astype(float)
 # Decoupler analysis
 network = pd.read_csv(resource_file, sep='\t')
 if 'weight' in network.columns:
-    dc_result = dc.run_ulm(mat, network)
+    dc_result = dc.run_ulm(mat, 
+                           network,
+                           batch_size=batch_size,
+                           min_n=min_n,
+                           verbose=verbose,
+                           use_raw=useraw)
 else:
     dc_result = dc.run_ulm(mat, network, weight=None)
 
