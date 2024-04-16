@@ -21,12 +21,19 @@ banner=$"
 cd -P -- "$(dirname -- "$0")"
 
 help_txt="
-Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-t] [-h]
+Usage: flop_launcher.sh [-d data_folder] [-e config_set] [-t] [-h] [-m "plot_config"]
 
 Argument list:
         -e: config set, either 'desktop' or 'cluster'. If none specified, it defaults to desktop
         -t: test mode, runs the pipeline with the test dataset and default parameters. Bear in mind that you still need to specify a config set with -e
-        -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets, and then outputs the figures also shown in the study. It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. It is strongly advised to run this setup within a HPC environment (config set = cluster).
+        -s: Launches FLOP to run the analysis detailed in the accompanying study. It runs FLOP with CCLE, PANACEA and Reheat datasets. 
+            It sets the pvalue threshold to 1 and the number of significant genes threshold to 30. For more information, please check the study. 
+            It is strongly advised to run this setup within a HPC environment (config set = cluster).
+        -m: plotter mode, generates a multidimensional scaling plot. The configuration string must be inputed as follows:
+
+            -m '[file path for FLOP result (fullmerged)] [biological context] [resource] [DE metric (logFC or stat (t-value))]'
+
+            The plot will be saved in the current directory.
         -h: shows this help message
 
 For more information, please refer to the README file.
@@ -39,7 +46,7 @@ error_func () {
 }
 
 testdata_downloader () {
-  curl -C - -O https://zenodo.org/record/8272401/files/test_data.zip?download=1
+  curl -C - -O https://zenodo.org/api/records/8272401
   mkdir ./test_data/
   mkdir ./test_data/test/
   unzip -n test_data.zip -d ./test_data/test/ 
@@ -55,7 +62,11 @@ pksource_downloader () {
   unzip -o flop_pkresources_31082023.zip -d ./scripts
 }
 
-while getopts 'e:hst' OPTION; do
+plotter () {
+  Rscript ./scripts/multid_plot.R -m "$1"
+}
+
+while getopts 'e:hstm:' OPTION; do
   case "$OPTION" in
     e)
       config_set="$OPTARG"
@@ -78,10 +89,13 @@ while getopts 'e:hst' OPTION; do
       data_folder="./flop_data/"
       n_thresh=30
       p_thresh=1
-      echo "#Generating data as in the manuscript#"
-      Rscript ./scripts/reheat_proc.R
-      # Rscript ./scripts/panacea_proc.R
-      # Rscript ./scripts/ccle_proc.R
+      ;;
+    m)
+      plot_config="$OPTARG"
+      echo $plot_config
+      plotter "$plot_config"
+      echo "#Plot generated, file saved in $PWD#"
+      exit
       ;;
     ?)
       error_func
@@ -103,7 +117,6 @@ else
 fi
 
 if [ $paper_mode == true ]; then
-  Rscript ./scripts/figures.R
   rm -r flop_pkresources_31082023.zip
   rm -r ./scripts/dc_resources
 fi
