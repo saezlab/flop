@@ -46,20 +46,19 @@ error_func () {
 }
 
 testdata_downloader () {
-  curl -C - -O https://zenodo.org/api/records/8272401
-  mkdir ./test_data/
-  mkdir ./test_data/test/
+  curl -C - -L -O https://zenodo.org/record/8272401/files/test_data.zip
+  mkdir -p ./test_data/test/
   unzip -n test_data.zip -d ./test_data/test/ 
 }
 
 studydata_downloader () {
-  curl -C - -O https://zenodo.org/record/8306225/files/flop_unproc_data.zip?download=1
+  curl -C - -L -O https://zenodo.org/record/8306225/files/flop_unproc_data.zip
   unzip -n flop_unproc_data.zip -d ./
 }
 
 pksource_downloader () {
-  curl -C - -O https://zenodo.org/record/8314350/files/flop_pkresources_31082023.zip?download=1
-  unzip -o flop_pkresources_31082023.zip -d ./scripts
+  curl -C - -L -O https://zenodo.org/record/10980463/files/flop_pkresources_12042024.zip
+  unzip -o flop_pkresources_12042024.zip -d ./scripts
 }
 
 plotter () {
@@ -110,7 +109,7 @@ shift "$(($OPTIND -1))"
 # Run flop_benchmark
 
 if [ $config_set == "desktop" ] || [ $config_set == "cluster" ]; then
-        nextflow -C flop.config run flop.nf -resume -profile $config_set --data_folder "$data_folder" -params-file ./params_flop.json
+        nextflow -C flop.config run flop.nf -profile $config_set --data_folder "$data_folder" -params-file ./params_flop.json
 else
         echo "Valid options: desktop, cluster"
         error_func
