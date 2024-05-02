@@ -22,10 +22,12 @@ dependencies:
   - bioconductor-edger=3.40.0
   - bioconductor-deseq2=1.38.0
   - bioconductor-vsn=3.66.0
+  - bioconductor-limma=3.54.0
   - bioconductor-org.hs.eg.db=3.16.0
   - nextflow=23.10.1
   - r-ggforce=0.4.1
   - r-ggpubr=0.6.0
+  - r-rocr=1.0_11
   - pip:
     - decoupler==1.6.0
     - omnipath==1.0.8
