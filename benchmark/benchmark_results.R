@@ -737,49 +737,8 @@ ggsave('plots/benchmark3.svg', plot = b3, device = 'svg', width = 16, height = 1
 ggsave('plots/benchmark3_baseline.svg', plot = baseline_scatter_plot_b3, device = 'svg', width = 8, height = 8, units = 'cm', dpi = 200)
 
 
-# SIZE-DE CORR PLOT
 
-deresults_files <- list.files(path = 'flop_results/diffexp', pattern = 'deresults.tsv', full.names = TRUE) %>%
-    .[!grepl('Atlascyt', .)] %>%
-    purrr::map(., function(x){
-        data <- read_tsv(x)
-        filtered_data <- data %>%
-            select(ID, contains('__filtered__NA+deseq2')) %>%
-            pivot_longer(-ID, names_to = 'runid', values_to = 'value') %>%
-            separate(runid, into = c('param', 'filtering', 'pipeline', 'biocontext', 'dataset', 'subset'), sep = '__') %>%
-            pivot_wider(names_from = 'param', values_from = 'value')
-        return(filtered_data)
-    }) %>% bind_rows()
-
-
-de_results_summary <- deresults_files %>%
-    group_by(biocontext, dataset, subset) %>%
-    filter(padj < 0.05, logFC>1.5) %>%
-    summarise(n = n())
-
-size_datasets <- list.dirs("benchmark_data", full.names=TRUE) %>%
-    purrr::map(., function(x){
-        data <- read_tsv(list.files(x, pattern = 'metadata.tsv', full.names = TRUE))
-        dataset_id <- x %>% strsplit(., '/') %>% unlist() %>% .[2]
-        data <- data %>% mutate(dataset = dataset_id) %>% 
-        dplyr::filter(!stringr::str_detect(group, "No"))            
-        return(data)
-    }) %>% bind_rows() %>%
-    group_by(dataset, group) %>%
-    summarise(size = n()) %>%
-    separate(dataset, into = c('dataset', 'subset'), sep = '_')
-
-size_de_data <- right_join(de_results_summary, size_datasets, by = c('dataset' = 'dataset', 'subset' = 'subset')) %>%
-    summarise(size = sum(size), n=mean(n))
-
-ggplot(size_de_data, aes(x = size, y = n, colour = dataset)) +
-    geom_point() +
-    cowplot::theme_cowplot() +
-    labs(x = 'Size of dataset', y = 'Number of DE genes', title = 'Size of dataset vs number of DE genes') +
-    theme(plot.title = element_text(hjust = 0.5), text = element_text(family='Calibri'))
-
-
-# Graphical abstract
+# Graphs for figs 3-4
 sample_pheatmap <- deresults_files %>%
     filter(dataset == 'Chaffin2022') %>%
     select(ID, subset, stat) %>%
@@ -798,8 +757,6 @@ sample_pheatmap <- deresults_files %>%
                                    begin = 0, end = 1, option = "viridis"))
 
 ggsave('plots/sample_pheatmap.svg', plot = sample_pheatmap, device = 'svg', width = 18, height = 12, units = 'cm', dpi = 200)
-
-
 
 biomarkers_data_subset %>% 
     filter(main_dataset == 'Simonson2023', diffexp == 'deseq2', status == 'filtered', statparam=='stat') %>%
