@@ -282,11 +282,11 @@ workflow {
         .set {datasets}
     
     Channel
-        .of('vsn_norm limma_analysis', 'voom_norm limma_analysis', 'tmm_norm limma_analysis', 'log2quant_norm limma_analysis', 'edger_analysis', 'deseq2_analysis')
+        .of(params.diffexp_pipelines.split(","))
         .set {pipelines}
     
     Channel
-        .of('filtered', 'unfiltered')
+        .of(params.filtering.split(","))
         .set {status}
   
     Channel
@@ -313,7 +313,7 @@ workflow {
         .set {diffexpr}
     
     diffexpr.downstream
-        .groupTuple(by:[0,1,2], size: 6)
+        .groupTuple(by:[0,1,2], size: params.diffexp_pipelines.length())
         .set {diffexpr_files}
     
     diffexpr.output
@@ -327,32 +327,30 @@ workflow {
     output_merge_de(params.scripts_dir,diffexpr_out)
         .set {diffexpr_merged}
 
-    downstream_merge_de(params.scripts_dir, diffexpr_files, diffexpr_metrics, params.flop_ngenes_threshold)
-        .set {mergede}
+    if (params.functional_analysis == true){
+        func_decoupler(params.scripts_dir, diffexpr_merged, resources)
+            .collectFile() { it ->
+            [ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
+            }
+            .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
+            .set {decoupler}
     
-    func_decoupler(params.scripts_dir, mergede, resources)
-        .collectFile() { it ->
-        [ "${it[0]}__${it[1]}.txt", "${it[2].parent}/${it[2].name}\n"]
-        }
-        .map{it -> tuple it.baseName.toString().replaceAll(/.txt/, "").split("__")[0], it.baseName.toString().replaceAll(/.txt/, "").split("__")[1], it}
-        .set {decoupler}
-
-    decoupler_merger(params.scripts_dir, decoupler)
-        .map{it -> tuple it[0].split("_")[0], it[1]}
-        .groupTuple(by:0)
-        .map{it -> tuple it[0], it[1]}
-        .set {subset_results}
-
-    subset_merger(params.scripts_dir, subset_results)
-        .concat(diffexpr_merged)
-        .groupTuple(by:0, size:2)
-        .map{it -> tuple it[0], it[1][0], it[1][1]}
-        .set {full_results}
-
-    rank_analysis(params.scripts_dir, full_results)
-        .set {rank}
-
-    top_bottom_overlap_analysis(params.scripts_dir, full_results, params.flop_pval_threshold)
-        .set {jaccard}
-
+        decoupler_merger(params.scripts_dir, decoupler)
+            .map{it -> tuple it[0].split("_")[0], it[1]}
+            .groupTuple(by:0)
+            .map{it -> tuple it[0], it[1]}
+            .set {subset_results}
+    
+        subset_merger(params.scripts_dir, subset_results)
+            .concat(diffexpr_merged)
+            .groupTuple(by:0, size:2)
+            .map{it -> tuple it[0], it[1][0], it[1][1]}
+            .set {full_results}
+    
+        rank_analysis(params.scripts_dir, full_results)
+            .set {rank}
+    
+        top_bottom_overlap_analysis(params.scripts_dir, full_results, params.flop_pval_threshold)
+            .set {jaccard}
+    }
 }

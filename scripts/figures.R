@@ -236,7 +236,7 @@ facet_b_fig2 <- correlation_toplot_dupl %>%
   ggplot(aes(y = spearman_average, x = main_dataset, fill = Filtered)) +
   geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
   stat_compare_means(aes(group = Filtered), method = 'wilcox.test', label = "p.signif", label.y=1.05, size=3) +
-  scale_fill_brewer(palette="Dark2") +
+  scale_fill_manual(values=c("#E69F00", "#009E73")) +
   ylab('') + xlab('Dataset') +
   scale_x_discrete(labels = c('CCLE', 'PANACEA', 'reheat')) +
   # ylim(0.5, 1.1) +
@@ -248,6 +248,7 @@ facet_a_fig2 <- correlation_toplot_dupl %>%
   ggplot(aes(y = spearman_average, x = main_dataset, fill = Space)) +
   geom_boxplot(outlier.alpha = 0.1, outlier.size=0.5, lwd = 0.2) +
   stat_compare_means(aes(group = Space), method = 'wilcox.test', label = "p.signif", label.y = 1.05, size=3) +
+  scale_fill_manual(values=c("#0072B2", "#D55E00")) +
   ylab('Spearman correlation') + xlab('Dataset') +
   scale_x_discrete(labels = c('CCLE', 'PANACEA', 'reheat')) +
   # ylim(0.5, 1.1) +

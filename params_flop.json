@@ -1,4 +1,7 @@
 {
+    "filtering": "unfiltered,filtered",
+    "diffexp_pipelines": "vsn_norm limma_analysis,voom_norm limma_analysis,tmm_norm limma_analysis,log2quant_norm limma_analysis,edger_analysis,deseq2_analysis",
+    "functional_analysis": "TRUE",
     "flop_ngenes_threshold": "30",
     "flop_pval_threshold": "1",
     "filterbyexpr_libsize": "NULL",
