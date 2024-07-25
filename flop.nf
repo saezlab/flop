@@ -1,6 +1,6 @@
 params.scripts_dir = projectDir
 params.data_folder = "$params.scripts_dir/data"
-params.parent_folder = projectDir
+params.outdir = projectDir
 
 def asciiBanner = 
 "##########################################################################\n" +
@@ -126,7 +126,7 @@ process diffexp_analysis {
 //Merges the output of differential expression analysis files
 process output_merge_de{
 
-    publishDir "$params.parent_folder/flop_results/diffexp", mode: 'copy'
+    publishDir "$params.outdir/flop_results/diffexp", mode: 'copy'
 
     input:
     path scripts_dir
@@ -216,7 +216,7 @@ process decoupler_merger{
 
 process subset_merger{
 
-    publishDir "$params.parent_folder/flop_results/funcomics/fullmerged/", mode: 'copy'
+    publishDir "$params.outdir/flop_results/funcomics/fullmerged/", mode: 'copy'
 
     input:
     path scripts_dir
@@ -236,7 +236,7 @@ process subset_merger{
 //Rank analysis
 process rank_analysis{
 
-    publishDir "$params.parent_folder/flop_results/funcomics/rank", mode: 'move'
+    publishDir "$params.outdir/flop_results/funcomics/rank", mode: 'move'
 
     input:
     path scripts_dir
@@ -256,7 +256,7 @@ process rank_analysis{
 //Top/bottom features overlap analysis
 process top_bottom_overlap_analysis{
 
-    publishDir "$params.parent_folder/flop_results/funcomics/overlap", mode: 'move'
+    publishDir "$params.outdir/flop_results/funcomics/overlap", mode: 'move'
 
     input:
     path scripts_dir
